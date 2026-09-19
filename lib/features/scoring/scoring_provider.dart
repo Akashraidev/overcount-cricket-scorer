@@ -74,6 +74,7 @@ class ScoringProvider extends ChangeNotifier {
   bool get isOverComplete => _isOverComplete;
   bool get isInningsComplete => _isInningsComplete;
   bool get isMatchComplete => _isMatchComplete;
+  bool get isMatchCancelled => _match?.isCancelled ?? false;
   String? get matchResultSummary => _matchResultSummary;
   Player? _previousBowler;
   Player? get previousBowler => _previousBowler;
@@ -1272,5 +1273,21 @@ class ScoringProvider extends ChangeNotifier {
     );
     await _matchRepo.updateMatch(updatedMatch);
     _match = updatedMatch;
+  }
+
+  Future<void> cancelMatch({required String reason}) async {
+    if (_match == null) return;
+    final cleanReason = reason.trim().isEmpty ? 'Interruption' : reason.trim();
+    final summary = 'Match Cancelled ($cleanReason)';
+    final updatedMatch = _match!.copyWith(
+      status: 'cancelled',
+      winnerTeamId: null,
+      resultSummary: summary,
+    );
+    await _matchRepo.updateMatch(updatedMatch);
+    _match = updatedMatch;
+    _isMatchComplete = true;
+    _matchResultSummary = summary;
+    notifyListeners();
   }
 }

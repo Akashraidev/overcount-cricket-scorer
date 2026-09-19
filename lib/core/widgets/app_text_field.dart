@@ -15,6 +15,8 @@ class AppTextField extends StatelessWidget {
   final int maxLines;
   final bool readOnly;
   final bool autofocus;
+  final FocusNode? focusNode;
+  final int? maxLength;
   final String? errorText;
   final VoidCallback? onTap;
 
@@ -32,6 +34,8 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.readOnly = false,
     this.autofocus = false,
+    this.focusNode,
+    this.maxLength,
     this.errorText,
     this.onTap,
   });
@@ -62,6 +66,8 @@ class AppTextField extends StatelessWidget {
           maxLines: maxLines,
           readOnly: readOnly,
           autofocus: autofocus,
+          focusNode: focusNode,
+          maxLength: maxLength,
           onTap: onTap,
           style: AppTextStyles.bodyMedium.copyWith(
             color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,

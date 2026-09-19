@@ -64,7 +64,7 @@ class MatchProvider extends ChangeNotifier {
   Innings? _activeMatchCurrentInnings;
   List<CricketMatch> _recentMatches = [];
   Map<String, List<Innings>> _matchInnings = {};
-  Map<String, int> _matchCounts = {'total': 0, 'live': 0, 'completed': 0, 'upcoming': 0};
+  Map<String, int> _matchCounts = {'total': 0, 'live': 0, 'completed': 0, 'upcoming': 0, 'cancelled': 0};
   bool _isLoading = false;
   String _statusFilter = 'All';
   String? _tournamentFilter;
@@ -363,5 +363,18 @@ class MatchProvider extends ChangeNotifier {
   Future<void> deleteMatch(String id) async {
     await _matchRepo.deleteMatch(id);
     await loadMatches();
+  }
+
+  Future<void> cancelMatch(String matchId, {required String reason}) async {
+    final match = _matches.cast<CricketMatch?>().firstWhere((m) => m?.id == matchId, orElse: () => null);
+    if (match == null) return;
+    final cleanReason = reason.trim().isEmpty ? 'Interruption' : reason.trim();
+    final updatedMatch = match.copyWith(
+      status: 'cancelled',
+      winnerTeamId: null,
+      resultSummary: 'Match Cancelled ($cleanReason)',
+    );
+    await _matchRepo.updateMatch(updatedMatch);
+    await loadMatches(silent: true);
   }
 }

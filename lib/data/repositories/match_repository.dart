@@ -112,12 +112,16 @@ class MatchRepository {
     final upcoming = Sqflite.firstIntValue(
       await db.rawQuery('SELECT COUNT(*) FROM ${DbTables.matches} WHERE status = ?', ['upcoming']),
     ) ?? 0;
+    final cancelled = Sqflite.firstIntValue(
+      await db.rawQuery('SELECT COUNT(*) FROM ${DbTables.matches} WHERE status = ?', ['cancelled']),
+    ) ?? 0;
 
     return {
       'total': total,
       'live': live,
       'completed': completed,
       'upcoming': upcoming,
+      'cancelled': cancelled,
     };
   }
 

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../core/constants/app_colors.dart';
+import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/widgets/app_button.dart';
 import '../../core/widgets/loading_state.dart';
@@ -53,6 +54,7 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> with SingleTicker
     final teamB = scorecardProv.teamB!;
     final allInnings = scorecardProv.allInnings;
     final isLive = match.status.toLowerCase() == 'live';
+    final isCancelled = match.status.toLowerCase() == 'cancelled';
 
     return Scaffold(
       appBar: AppBar(
@@ -141,14 +143,59 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> with SingleTicker
           ),
         ),
       ),
-      body: TabBarView(
-        controller: _tabController,
+      body: Column(
         children: [
-          ScorecardTab(provider: scorecardProv),
-          CommentaryTab(provider: scorecardProv),
-          StatsChartsTab(provider: scorecardProv),
-          PartnershipsTab(provider: scorecardProv),
-          FallOfWicketsTab(provider: scorecardProv),
+          if (isCancelled)
+            Container(
+              width: double.infinity,
+              margin: const EdgeInsets.fromLTRB(16, 12, 16, 4),
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              decoration: BoxDecoration(
+                color: AppColors.error.withValues(alpha: 0.12),
+                borderRadius: AppRadius.roundedMd,
+                border: Border.all(color: AppColors.error.withValues(alpha: 0.4)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.cancel_outlined, color: AppColors.error, size: 22),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          match.resultSummary ?? 'Match Cancelled',
+                          style: AppTextStyles.bodyMedium.copyWith(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Scored data and individual player statistics up to cancellation are preserved.',
+                          style: AppTextStyles.bodySmall.copyWith(
+                            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          Expanded(
+            child: TabBarView(
+              controller: _tabController,
+              children: [
+                ScorecardTab(provider: scorecardProv),
+                CommentaryTab(provider: scorecardProv),
+                StatsChartsTab(provider: scorecardProv),
+                PartnershipsTab(provider: scorecardProv),
+                FallOfWicketsTab(provider: scorecardProv),
+              ],
+            ),
+          ),
         ],
       ),
       bottomNavigationBar: isLive

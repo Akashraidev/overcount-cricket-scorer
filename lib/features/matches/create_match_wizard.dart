@@ -1370,6 +1370,8 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
       draft.openingBowlerId = bowlingPlayers.isNotEmpty ? bowlingPlayers.first.id : null;
     }
 
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -1409,22 +1411,36 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('1ST INNINGS BATTERS (${battingTeam.name})', style: AppTextStyles.label),
-                  TextButton.icon(
-                    icon: const Icon(Icons.person_add, size: 14),
-                    label: const Text('Add Batter'),
-                    onPressed: () => _promptAddPlayer(context, battingTeam.id),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.sports_cricket, size: 16, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '1ST INNINGS BATTERS (${battingTeam.name.toUpperCase()})',
+                      style: AppTextStyles.label.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
               if (battingPlayers.isEmpty)
                 AppButton(
                   label: 'Add Batters to ${battingTeam.shortName}',
                   icon: Icons.person_add,
+                  isFullWidth: true,
                   onPressed: () => _promptAddPlayer(context, battingTeam.id),
                 )
               else ...[
@@ -1447,19 +1463,22 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
 
                 // Swap Batters Button
                 Center(
-                  child: OutlinedButton.icon(
-                    onPressed: () {
-                      setState(() {
-                        final temp = draft.openingStrikerId;
-                        draft.openingStrikerId = draft.openingNonStrikerId;
-                        draft.openingNonStrikerId = temp;
-                      });
-                    },
-                    icon: const Icon(Icons.swap_vert, size: 18),
-                    label: const Text('Swap Striker & Non-Striker'),
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.primary,
-                      side: const BorderSide(color: AppColors.primary),
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          final temp = draft.openingStrikerId;
+                          draft.openingStrikerId = draft.openingNonStrikerId;
+                          draft.openingNonStrikerId = temp;
+                        });
+                      },
+                      icon: const Icon(Icons.swap_vert, size: 18),
+                      label: const Text('Swap Striker & Non-Striker'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: AppColors.primary,
+                        side: const BorderSide(color: AppColors.primary),
+                      ),
                     ),
                   ),
                 ),
@@ -1480,6 +1499,40 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
                     });
                   },
                 ),
+                const SizedBox(height: 14),
+
+                // Shifted Add Batter Action below selectors with sleek modern design
+                Center(
+                  child: InkWell(
+                    onTap: () => _promptAddPlayer(context, battingTeam.id),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.07),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: isDark ? 0.3 : 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.person_add_alt_1_rounded, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Add New Batter',
+                            style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ],
           ),
@@ -1493,25 +1546,39 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text('OPENING BOWLER (${bowlingTeam.name})', style: AppTextStyles.label),
-                  TextButton.icon(
-                    icon: const Icon(Icons.person_add, size: 14),
-                    label: const Text('Add Bowler'),
-                    onPressed: () => _promptAddPlayer(context, bowlingTeam.id, defaultRole: 'Bowler'),
+                  Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: AppColors.primary.withValues(alpha: 0.12),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(Icons.sports_baseball_outlined, size: 16, color: AppColors.primary),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'OPENING BOWLER (${bowlingTeam.name.toUpperCase()})',
+                      style: AppTextStyles.label.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0.5,
+                      ),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                    ),
                   ),
                 ],
               ),
-              const SizedBox(height: 10),
+              const SizedBox(height: 16),
 
               if (bowlingPlayers.isEmpty)
                 AppButton(
                   label: 'Add Bowlers to ${bowlingTeam.shortName}',
                   icon: Icons.person_add,
+                  isFullWidth: true,
                   onPressed: () => _promptAddPlayer(context, bowlingTeam.id, defaultRole: 'Bowler'),
                 )
-              else
+              else ...[
                 AppDropdown<String>(
                   label: 'Opening Bowler (Starts Over 1)',
                   value: draft.openingBowlerId,
@@ -1520,6 +1587,41 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
                       .toList(),
                   onChanged: (v) => setState(() => draft.openingBowlerId = v),
                 ),
+                const SizedBox(height: 14),
+
+                // Shifted Add Bowler Action below selector with sleek modern design
+                Center(
+                  child: InkWell(
+                    onTap: () => _promptAddPlayer(context, bowlingTeam.id, defaultRole: 'Bowler'),
+                    borderRadius: BorderRadius.circular(10),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.07),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(
+                          color: AppColors.primary.withValues(alpha: isDark ? 0.3 : 0.2),
+                        ),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.person_add_alt_1_rounded, size: 16, color: AppColors.primary),
+                          const SizedBox(width: 8),
+                          Text(
+                            'Add New Bowler',
+                            style: AppTextStyles.label.copyWith(
+                              color: AppColors.primary,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),

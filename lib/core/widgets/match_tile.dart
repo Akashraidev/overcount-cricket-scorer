@@ -33,6 +33,7 @@ class MatchTile extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
     final isLive = match.status.toLowerCase() == 'live';
     final isCompleted = match.status.toLowerCase() == 'completed';
+    final isCancelled = match.status.toLowerCase() == 'cancelled';
 
     // Find innings for Team A and Team B
     Innings? innTeamA;
@@ -132,6 +133,22 @@ class MatchTile extends StatelessWidget {
                     'COMPLETED',
                     style: AppTextStyles.label.copyWith(
                       color: AppColors.success,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                )
+              else if (isCancelled)
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                  decoration: BoxDecoration(
+                    color: AppColors.error.withValues(alpha: 0.15),
+                    borderRadius: AppRadius.roundedSm,
+                  ),
+                  child: Text(
+                    'CANCELLED',
+                    style: AppTextStyles.label.copyWith(
+                      color: AppColors.error,
                       fontSize: 9.5,
                       fontWeight: FontWeight.bold,
                     ),
@@ -304,10 +321,12 @@ class MatchTile extends StatelessWidget {
                 child: Text(
                   match.resultSummary ?? match.venue,
                   style: AppTextStyles.bodySmall.copyWith(
-                    color: match.resultSummary != null
-                        ? AppColors.primary
-                        : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-                    fontWeight: match.resultSummary != null ? FontWeight.w600 : FontWeight.normal,
+                    color: isCancelled
+                        ? AppColors.error
+                        : (match.resultSummary != null
+                            ? AppColors.primary
+                            : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)),
+                    fontWeight: (match.resultSummary != null || isCancelled) ? FontWeight.w600 : FontWeight.normal,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,

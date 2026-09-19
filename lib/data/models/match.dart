@@ -12,7 +12,7 @@ class CricketMatch {
   final String teamBId;
   final String? tossWinnerTeamId;
   final String? tossDecision; // 'Bat', 'Bowl'
-  final String status; // 'upcoming', 'live', 'completed', 'abandoned'
+  final String status; // 'upcoming', 'live', 'completed', 'cancelled', 'abandoned'
   final String? resultSummary;
   final String? winnerTeamId;
   final int currentInningsNumber;
@@ -126,4 +126,9 @@ class CricketMatch {
       createdAt: createdAt ?? this.createdAt,
     );
   }
+
+  bool get isLive => status.toLowerCase() == 'live';
+  bool get isCompleted => status.toLowerCase() == 'completed';
+  bool get isCancelled => status.toLowerCase() == 'cancelled';
+  bool get isUpcoming => status.toLowerCase() == 'upcoming';
 }

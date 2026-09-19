@@ -31,6 +31,10 @@ import 'package:scorecard/data/models/fall_of_wicket.dart';
 import 'package:scorecard/data/models/partnership.dart';
 import 'package:scorecard/features/settings/settings_provider.dart';
 import 'package:scorecard/features/settings/settings_screen.dart';
+import 'package:scorecard/core/widgets/match_tile.dart';
+import 'package:scorecard/features/scoring/widgets/cancel_match_dialog.dart';
+import 'package:scorecard/core/widgets/app_card.dart';
+import 'package:scorecard/core/constants/app_text_styles.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -1125,6 +1129,275 @@ void main() {
       await tester.tap(buttonFinder);
       await tester.pump();
       expect(settingsProvider.isLoading, isFalse);
+    });
+  });
+
+  group('Match Cancellation Feature Tests', () {
+    test('CricketMatch model status getters', () {
+      const match = CricketMatch(
+        id: 'm_cancel_1',
+        title: 'IND vs AUS - Test',
+        venue: 'MCG',
+        matchDate: 1718000000000,
+        format: 'T20',
+        totalOvers: 20,
+        teamAId: 't1',
+        teamBId: 't2',
+        status: 'cancelled',
+        resultSummary: 'Match Cancelled (Rain Interruption)',
+        createdAt: 1000,
+      );
+
+      expect(match.isCancelled, isTrue);
+      expect(match.isLive, isFalse);
+      expect(match.isCompleted, isFalse);
+      expect(match.isUpcoming, isFalse);
+    });
+
+    testWidgets('CancelMatchDialog renders reasons and custom input', (tester) async {
+      const match = CricketMatch(
+        id: 'm_cancel_2',
+        title: 'IND vs PAK',
+        venue: 'Dubai',
+        matchDate: 1718000000000,
+        format: 'T20',
+        totalOvers: 20,
+        teamAId: 't1',
+        teamBId: 't2',
+        status: 'live',
+        createdAt: 1000,
+      );
+
+      String? selectedReason;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  selectedReason = await CancelMatchDialog.show(context, match: match);
+                },
+                child: const Text('Open Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open dialog
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
+
+      // Verify dialog title, explanation and predefined reasons exist
+      expect(find.text('Cancel Match?'), findsOneWidget);
+      expect(find.text('Rain Interruption'), findsOneWidget);
+      expect(find.text('Fog / Poor Visibility'), findsOneWidget);
+      expect(find.text('Ground Conditions'), findsOneWidget);
+      expect(find.text('Technical Issue'), findsOneWidget);
+      expect(find.text('Other'), findsOneWidget);
+
+      // Select 'Fog / Poor Visibility'
+      await tester.tap(find.text('Fog / Poor Visibility'));
+      await tester.pumpAndSettle();
+
+      // Tap 'Cancel Match' button
+      await tester.tap(find.widgetWithText(AppButton, 'Cancel Match'));
+      await tester.pumpAndSettle();
+
+      expect(selectedReason, 'Fog / Poor Visibility');
+    });
+
+    testWidgets('CancelMatchDialog handles custom Other reason', (tester) async {
+      const match = CricketMatch(
+        id: 'm_cancel_3',
+        title: 'ENG vs SA',
+        venue: 'Lord\'s',
+        matchDate: 1718000000000,
+        format: 'ODI',
+        totalOvers: 50,
+        teamAId: 't1',
+        teamBId: 't2',
+        status: 'live',
+        createdAt: 1000,
+      );
+
+      String? selectedReason;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async {
+                  selectedReason = await CancelMatchDialog.show(context, match: match);
+                },
+                child: const Text('Open Dialog'),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Open dialog
+      await tester.tap(find.text('Open Dialog'));
+      await tester.pumpAndSettle();
+
+      // Select 'Other'
+      await tester.tap(find.text('Other'));
+      await tester.pumpAndSettle();
+
+      // Enter custom reason
+      await tester.enterText(find.byType(TextField), 'Floodlight failure');
+      await tester.pumpAndSettle();
+
+      // Confirm
+      await tester.tap(find.widgetWithText(AppButton, 'Cancel Match'));
+      await tester.pumpAndSettle();
+
+      expect(selectedReason, 'Floodlight failure');
+    });
+
+    testWidgets('MatchTile displays CANCELLED badge for cancelled matches', (tester) async {
+      final teamA = Team(id: 't1', name: 'India', shortName: 'IND', colorValue: 0xFF1D4ED8, createdAt: 1000);
+      final teamB = Team(id: 't2', name: 'Australia', shortName: 'AUS', colorValue: 0xFFF59E0B, createdAt: 1000);
+      const match = CricketMatch(
+        id: 'm_cancel_4',
+        title: 'IND vs AUS',
+        venue: 'Sydney',
+        matchDate: 1718000000000,
+        format: 'T20',
+        totalOvers: 20,
+        teamAId: 't1',
+        teamBId: 't2',
+        status: 'cancelled',
+        resultSummary: 'Match Cancelled (Rain Interruption)',
+        createdAt: 1000,
+      );
+
+      bool viewScorecardCalled = false;
+      bool continueScoringCalled = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: MatchTile(
+              match: match,
+              teamA: teamA,
+              teamB: teamB,
+              onViewScorecard: () {
+                viewScorecardCalled = true;
+              },
+              onContinueScoring: () {
+                continueScoringCalled = true;
+              },
+            ),
+          ),
+        ),
+      );
+
+      // CANCELLED badge should be displayed
+      expect(find.text('CANCELLED'), findsOneWidget);
+      expect(find.text('LIVE'), findsNothing);
+      expect(find.text('COMPLETED'), findsNothing);
+      expect(find.text('Match Cancelled (Rain Interruption)'), findsOneWidget);
+
+      // Tapping should trigger onViewScorecard, never onContinueScoring
+      await tester.tap(find.byType(MatchTile));
+      await tester.pump();
+
+      expect(viewScorecardCalled, isTrue);
+      expect(continueScoringCalled, isFalse);
+    });
+  });
+
+  group('CreateMatchWizard Step 5 Opener Cards Resilience Tests', () {
+    testWidgets('Opening cards render with responsive headers and centered Add New Batter/Bowler buttons without overflow on 320px screen', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  AppCard(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.12),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.sports_cricket, size: 16, color: AppColors.primary),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Text(
+                                '1ST INNINGS BATTERS (EXTRAORDINARILY LONG TEAM NAME SUPER KINGS XI)',
+                                style: AppTextStyles.label.copyWith(
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        Center(
+                          child: InkWell(
+                            onTap: () {},
+                            borderRadius: BorderRadius.circular(10),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: AppColors.primary.withValues(alpha: 0.07),
+                                borderRadius: BorderRadius.circular(10),
+                                border: Border.all(
+                                  color: AppColors.primary.withValues(alpha: 0.2),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.person_add_alt_1_rounded, size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Add New Batter',
+                                    style: AppTextStyles.label.copyWith(
+                                      color: AppColors.primary,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Add New Batter'), findsOneWidget);
+      expect(find.byIcon(Icons.sports_cricket), findsOneWidget);
     });
   });
 }

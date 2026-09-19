@@ -25,7 +25,7 @@ class MatchesScreen extends StatelessWidget {
     final teamProv = context.watch<TeamProvider>();
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
-    final statuses = ['All', 'Live', 'Completed', 'Upcoming'];
+    final statuses = ['All', 'Live', 'Completed', 'Upcoming', 'Cancelled'];
     final matches = matchProv.matches;
 
     return Scaffold(

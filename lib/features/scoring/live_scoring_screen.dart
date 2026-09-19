@@ -15,6 +15,7 @@ import '../matches/match_provider.dart';
 import '../scorecard/match_detail_screen.dart';
 import 'local_scoring_provider.dart';
 import 'scoring_provider.dart';
+import 'widgets/cancel_match_dialog.dart';
 import 'widgets/current_over_track.dart';
 import 'widgets/end_over_dialog.dart';
 import 'widgets/extras_bottom_sheet.dart';
@@ -63,6 +64,9 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
 
     // Safety guard: ensure the match loaded in provider actually matches this screen's matchId
     if (scoringProv.match?.id != widget.matchId) return;
+
+    // Do not trigger completion or innings break if match is cancelled
+    if (scoringProv.match?.status.toLowerCase() == 'cancelled') return;
 
     if (scoringProv.isMatchComplete && scoringProv.matchResultSummary != null) {
       _dialogShown = true;
@@ -482,6 +486,8 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                     _showChangeBowlerLimitDialog(context, scoringProv);
                   } else if (val == 'declare') {
                     _confirmDeclare(context, scoringProv);
+                  } else if (val == 'cancel_match') {
+                    _promptCancelMatch(context, scoringProv);
                   } else if (val == 'retire') {
                     _showRetireSheet(context, scoringProv);
                   } else if (val == 'add_bat') {
@@ -549,6 +555,23 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                         const Icon(Icons.flag_outlined, size: 18, color: AppColors.warning),
                         const SizedBox(width: 8),
                         Text(scoringProv.currentInnings?.inningsNumber == 1 ? 'End 1st Innings Early' : 'End Match Early'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'cancel_match',
+                    child: Row(
+                      children: [
+                        Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
+                        SizedBox(width: 8),
+                        Text(
+                          'Cancel Match',
+                          style: TextStyle(
+                            color: AppColors.error,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -1500,6 +1523,41 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
         });
         await prov.undoLastBall();
       },
+    );
+  }
+
+  Future<void> _promptCancelMatch(BuildContext context, ScoringProvider prov) async {
+    final match = prov.match;
+    if (match == null) return;
+
+    final navigator = Navigator.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    final localProv = context.read<LocalScoringProvider>();
+    final matchProv = context.read<MatchProvider>();
+
+    final reason = await CancelMatchDialog.show(context, match: match);
+    if (reason == null) return;
+
+    // Execute cancellation
+    await prov.cancelMatch(reason: reason);
+
+    if (localProv.isHosting) {
+      await localProv.stopHosting();
+    }
+    await matchProv.loadMatches(silent: true);
+
+    messenger.showSnackBar(
+      SnackBar(
+        content: Text('Match cancelled: $reason'),
+        backgroundColor: AppColors.error,
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+
+    navigator.pushReplacement(
+      MaterialPageRoute(
+        builder: (context) => MatchDetailScreen(matchId: widget.matchId),
+      ),
     );
   }
 
