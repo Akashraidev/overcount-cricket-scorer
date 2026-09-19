@@ -171,6 +171,7 @@ class EndInningsConfirmDialog extends StatelessWidget {
                       children: [
                         Text(
                           'TARGET FOR ${bowlingTeam.name.toUpperCase()}',
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.label.copyWith(
                             letterSpacing: 1.2,
                             fontWeight: FontWeight.w800,
@@ -180,6 +181,7 @@ class EndInningsConfirmDialog extends StatelessWidget {
                         const SizedBox(height: 2),
                         Text(
                           '$target RUNS',
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.scoreMedium.copyWith(
                             color: AppColors.accent,
                             fontSize: 22,
@@ -187,6 +189,7 @@ class EndInningsConfirmDialog extends StatelessWidget {
                         ),
                         Text(
                           'Need $target runs in ${match.totalOvers} overs (Req. RR: ${reqRunRate.toStringAsFixed(2)} RPO)',
+                          textAlign: TextAlign.center,
                           style: AppTextStyles.bodySmall.copyWith(fontSize: 11),
                         ),
                       ],

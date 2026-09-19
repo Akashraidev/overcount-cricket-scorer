@@ -11,6 +11,7 @@ import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_dropdown.dart';
 import '../../core/widgets/app_text_field.dart';
 import '../../core/widgets/loading_state.dart';
+import '../matches/match_provider.dart';
 import '../scorecard/match_detail_screen.dart';
 import 'local_scoring_provider.dart';
 import 'scoring_provider.dart';
@@ -81,6 +82,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
           },
           onHome: () {
             _dialogShown = false;
+            context.read<MatchProvider>().loadMatches(silent: true);
             Navigator.of(context).popUntil((route) => route.isFirst);
           },
         );
@@ -432,6 +434,11 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
 
     return PopScope(
       canPop: !isMatchComplete,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) {
+          context.read<MatchProvider>().loadMatches(silent: true);
+        }
+      },
       child: Scaffold(
         appBar: AppBar(
           automaticallyImplyLeading: !isMatchComplete,

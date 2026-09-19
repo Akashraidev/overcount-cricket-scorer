@@ -23,14 +23,11 @@ class TeamsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Teams Directory'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: AppButton(
-              label: 'Add Team',
-              icon: Icons.add,
-              height: 38,
-              onPressed: () => AddEditTeamDialog.show(context),
-            ),
+          AppHeaderActionButton(
+            label: 'Add Team',
+            icon: Icons.add_rounded,
+            margin: const EdgeInsets.only(right: 14),
+            onPressed: () => AddEditTeamDialog.show(context),
           ),
         ],
       ),

@@ -4,6 +4,7 @@ import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_text_styles.dart';
+import '../../core/widgets/app_button.dart';
 import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/empty_state.dart';
@@ -117,8 +118,11 @@ class _TeamDetailScreenState extends State<TeamDetailScreen> {
             // Squad Header
             SectionHeader(
               title: 'Squad Roster (${players.length})',
-              actionLabel: '+ Add Player',
-              onAction: () => AddEditPlayerDialog.show(context, initialTeamId: team.id),
+              trailing: AppHeaderActionButton(
+                label: 'Add Player',
+                icon: Icons.person_add_rounded,
+                onPressed: () => AddEditPlayerDialog.show(context, initialTeamId: team.id),
+              ),
             ),
             const SizedBox(height: 12),
 

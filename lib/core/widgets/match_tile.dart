@@ -50,8 +50,8 @@ class MatchTile extends StatelessWidget {
       hasGlow: isLive,
       glowColor: AppColors.liveRed,
       borderColor: isLive ? AppColors.liveRed.withValues(alpha: 0.5) : null,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      margin: const EdgeInsets.only(bottom: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -62,7 +62,7 @@ class MatchTile extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                     decoration: BoxDecoration(
                       color: isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurfaceElevated,
                       borderRadius: AppRadius.roundedSm,
@@ -72,6 +72,7 @@ class MatchTile extends StatelessWidget {
                       style: AppTextStyles.label.copyWith(
                         color: AppColors.primary,
                         fontWeight: FontWeight.bold,
+                        fontSize: 10.5,
                       ),
                     ),
                   ),
@@ -91,7 +92,7 @@ class MatchTile extends StatelessWidget {
               // Status Tag
               if (isLive)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2.5),
                   decoration: BoxDecoration(
                     color: AppColors.liveRed.withValues(alpha: 0.15),
                     borderRadius: AppRadius.roundedFull,
@@ -108,13 +109,13 @@ class MatchTile extends StatelessWidget {
                           shape: BoxShape.circle,
                         ),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
                         'LIVE',
                         style: AppTextStyles.label.copyWith(
                           color: AppColors.liveRed,
                           fontWeight: FontWeight.bold,
-                          fontSize: 11,
+                          fontSize: 10.5,
                         ),
                       ),
                     ],
@@ -122,7 +123,7 @@ class MatchTile extends StatelessWidget {
                 )
               else if (isCompleted)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.success.withValues(alpha: 0.15),
                     borderRadius: AppRadius.roundedSm,
@@ -131,14 +132,14 @@ class MatchTile extends StatelessWidget {
                     'COMPLETED',
                     style: AppTextStyles.label.copyWith(
                       color: AppColors.success,
-                      fontSize: 10,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 )
               else
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                   decoration: BoxDecoration(
                     color: AppColors.warning.withValues(alpha: 0.15),
                     borderRadius: AppRadius.roundedSm,
@@ -147,7 +148,7 @@ class MatchTile extends StatelessWidget {
                     'UPCOMING',
                     style: AppTextStyles.label.copyWith(
                       color: AppColors.warning,
-                      fontSize: 10,
+                      fontSize: 9.5,
                       fontWeight: FontWeight.bold,
                     ),
                   ),
@@ -155,7 +156,7 @@ class MatchTile extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 12),
+          const SizedBox(height: 10),
 
           // Match Title / Teams & Scores
           Row(
@@ -168,8 +169,8 @@ class MatchTile extends StatelessWidget {
                     Row(
                       children: [
                         Container(
-                          width: 10,
-                          height: 10,
+                          width: 8,
+                          height: 8,
                           decoration: BoxDecoration(
                             color: Color(teamA.colorValue),
                             shape: BoxShape.circle,
@@ -179,8 +180,9 @@ class MatchTile extends StatelessWidget {
                         Expanded(
                           child: Text(
                             teamA.name,
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              fontWeight: FontWeight.w600,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
                               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                             ),
                             maxLines: 1,
@@ -190,27 +192,43 @@ class MatchTile extends StatelessWidget {
                       ],
                     ),
                     if (innTeamA != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${innTeamA.totalRuns}/${innTeamA.totalWickets} (${innTeamA.oversDisplay} ov)',
-                        style: AppTextStyles.scoreSmall.copyWith(
-                          fontSize: 14,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
+                      const SizedBox(height: 3),
+                      Row(
+                        children: [
+                          Text(
+                            '${innTeamA.totalRuns}/${innTeamA.totalWickets}',
+                            style: AppTextStyles.scoreMedium.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '(${innTeamA.oversDisplay} ov)',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 11,
+                              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
                 ),
               ),
 
-              Text(
-                'vs',
-                style: AppTextStyles.bodySmall.copyWith(
-                  color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                  fontWeight: FontWeight.bold,
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8),
+                child: Text(
+                  'vs',
+                  style: AppTextStyles.bodySmall.copyWith(
+                    color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 11,
+                  ),
                 ),
               ),
-              const SizedBox(width: 16),
 
               // Team B
               Expanded(
@@ -224,8 +242,9 @@ class MatchTile extends StatelessWidget {
                           child: Text(
                             teamB.name,
                             textAlign: TextAlign.end,
-                            style: AppTextStyles.bodyLarge.copyWith(
-                              fontWeight: FontWeight.w600,
+                            style: AppTextStyles.bodyMedium.copyWith(
+                              fontWeight: FontWeight.w700,
+                              fontSize: 14,
                               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                             ),
                             maxLines: 1,
@@ -234,8 +253,8 @@ class MatchTile extends StatelessWidget {
                         ),
                         const SizedBox(width: 6),
                         Container(
-                          width: 10,
-                          height: 10,
+                          width: 8,
+                          height: 8,
                           decoration: BoxDecoration(
                             color: Color(teamB.colorValue),
                             shape: BoxShape.circle,
@@ -244,13 +263,27 @@ class MatchTile extends StatelessWidget {
                       ],
                     ),
                     if (innTeamB != null) ...[
-                      const SizedBox(height: 4),
-                      Text(
-                        '${innTeamB.totalRuns}/${innTeamB.totalWickets} (${innTeamB.oversDisplay} ov)',
-                        style: AppTextStyles.scoreSmall.copyWith(
-                          fontSize: 14,
-                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        ),
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.end,
+                        children: [
+                          Text(
+                            '(${innTeamB.oversDisplay} ov)',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              fontSize: 11,
+                              color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                            ),
+                          ),
+                          const SizedBox(width: 5),
+                          Text(
+                            '${innTeamB.totalRuns}/${innTeamB.totalWickets}',
+                            style: AppTextStyles.scoreMedium.copyWith(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w800,
+                              color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ],
@@ -259,9 +292,9 @@ class MatchTile extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 12),
-          const Divider(),
           const SizedBox(height: 8),
+          const Divider(height: 12),
+          const SizedBox(height: 4),
 
           // Footer: Result Summary / Venue
           Row(

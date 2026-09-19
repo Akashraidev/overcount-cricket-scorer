@@ -15,6 +15,7 @@ class AppTextField extends StatelessWidget {
   final int maxLines;
   final bool readOnly;
   final bool autofocus;
+  final String? errorText;
   final VoidCallback? onTap;
 
   const AppTextField({
@@ -31,6 +32,7 @@ class AppTextField extends StatelessWidget {
     this.maxLines = 1,
     this.readOnly = false,
     this.autofocus = false,
+    this.errorText,
     this.onTap,
   });
 
@@ -66,6 +68,7 @@ class AppTextField extends StatelessWidget {
           ),
           decoration: InputDecoration(
             hintText: hint,
+            errorText: errorText,
             prefixIcon: prefixIcon,
             suffixIcon: suffixIcon,
           ),

@@ -318,37 +318,42 @@ class LiveSharingSheet extends StatelessWidget {
 
   Widget _buildPinDisplay(String pin) {
     final digits = pin.padRight(6, '-').split('');
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        for (int i = 0; i < digits.length; i++) ...[
-          if (i == 3) const Padding(
-            padding: EdgeInsets.symmetric(horizontal: 6),
-            child: Text('-', style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.grey)),
-          ),
-          Container(
-            width: 40,
-            height: 48,
-            margin: const EdgeInsets.symmetric(horizontal: 3),
-            decoration: BoxDecoration(
-              color: AppColors.primary.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(8),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
-            ),
-            child: Center(
-              child: Text(
-                digits[i],
-                style: const TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.primary,
-                  fontFamily: 'monospace',
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          for (int i = 0; i < digits.length; i++) ...[
+            if (i == 3)
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 4),
+                child: Text('-', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.grey)),
+              ),
+            Container(
+              width: 36,
+              height: 44,
+              margin: const EdgeInsets.symmetric(horizontal: 2.5),
+              decoration: BoxDecoration(
+                color: AppColors.primary.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(color: AppColors.primary.withValues(alpha: 0.4), width: 1.5),
+              ),
+              child: Center(
+                child: Text(
+                  digits[i],
+                  style: const TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.primary,
+                    fontFamily: 'monospace',
+                  ),
                 ),
               ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

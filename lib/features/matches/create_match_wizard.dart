@@ -474,10 +474,9 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             const SectionHeader(title: 'Step 2 — Select Teams'),
-            AppButton(
+            AppHeaderActionButton(
               label: 'New Team',
-              icon: Icons.add,
-              height: 36,
+              icon: Icons.add_rounded,
               onPressed: () async {
                 final created = await AddEditTeamDialog.show(context);
                 if (created != null && mounted) {
@@ -868,11 +867,37 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Step 3 — Playing XI Squads'),
-        const SizedBox(height: 12),
-        Text(
-          'Confirm players for both squads. You can add new players directly below if needed.',
-          style: AppTextStyles.bodySmall,
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            const SectionHeader(title: 'Step 3 — Playing XI Squads'),
+            AppHeaderActionButton(
+              label: 'Add Player',
+              icon: Icons.person_add_rounded,
+              onPressed: () => _promptAddPlayerChoice(context, teamA, teamB),
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: AppColors.primary.withValues(alpha: 0.08),
+            borderRadius: BorderRadius.circular(8),
+            border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
+          ),
+          child: const Row(
+            children: [
+              Icon(Icons.touch_app_outlined, size: 18, color: AppColors.primary),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Tap to select/deselect. Long-press & drag a player to transfer between teams.',
+                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+                ),
+              ),
+            ],
+          ),
         ),
         const SizedBox(height: 16),
 
@@ -903,168 +928,280 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
       playingXi.addAll(players.map((p) => p.id));
     }
 
-    return AppCard(
-      padding: const EdgeInsets.all(16),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              CircleAvatar(
-                radius: 18,
-                backgroundColor: teamColor.withValues(alpha: 0.18),
-                child: Text(
-                  team.shortName.length > 3 ? team.shortName.substring(0, 3) : team.shortName,
-                  style: TextStyle(
-                    color: teamColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      team.name,
-                      style: AppTextStyles.h3.copyWith(
-                        fontSize: 15,
-                        color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                    const SizedBox(height: 2),
-                    Text(
-                      '${playingXi.length} of ${players.length} players selected',
-                      style: AppTextStyles.bodySmall.copyWith(
-                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                        fontSize: 12,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              OutlinedButton.icon(
-                style: OutlinedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                  minimumSize: Size.zero,
-                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                ),
-                icon: const Icon(Icons.person_add_rounded, size: 15, color: AppColors.primary),
-                label: const Text(
-                  'Add Player',
-                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
-                ),
-                onPressed: () => _promptAddPlayer(context, team.id),
-              ),
-            ],
-          ),
-          if (players.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.end,
-              children: [
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      playingXi.clear();
-                      playingXi.addAll(players.map((p) => p.id));
-                    });
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: Text(
-                      'Select All',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
-                    ),
-                  ),
-                ),
-                const Text(' • ', style: TextStyle(fontSize: 11, color: Colors.grey)),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      playingXi.clear();
-                    });
-                  },
-                  child: const Padding(
-                    padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                    child: Text(
-                      'Clear',
-                      style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
-                    ),
-                  ),
-                ),
-              ],
+    return DragTarget<Player>(
+      onWillAcceptWithDetails: (details) => details.data.teamId != team.id,
+      onAcceptWithDetails: (details) async {
+        await _movePlayerToTeam(context, details.data, team, isTeamA, draft);
+      },
+      builder: (context, candidateData, rejectedData) {
+        final isHovering = candidateData.isNotEmpty;
+        return AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: isHovering ? AppColors.accent : Colors.transparent,
+              width: 2,
             ),
-          ],
-          const SizedBox(height: 10),
-          if (players.isEmpty)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Center(
-                child: Column(
+          ),
+          child: AppCard(
+            borderColor: isHovering ? AppColors.accent : null,
+            backgroundColor: isHovering
+                ? (isDark ? AppColors.accent.withValues(alpha: 0.15) : const Color(0xFFFFF9C4))
+                : null,
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (isHovering) ...[
+                  Container(
+                    margin: const EdgeInsets.only(bottom: 12),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.accent.withValues(alpha: 0.25),
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: AppColors.accent, width: 1.5),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.file_download_outlined, color: AppColors.accent, size: 20),
+                        const SizedBox(width: 8),
+                        Text(
+                          'Drop here to transfer to ${team.name}',
+                          style: const TextStyle(
+                            color: AppColors.accent,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
-                    const Text('No players yet in this team.'),
-                    const SizedBox(height: 8),
-                    AppButton(
-                      label: 'Add Player to ${team.shortName}',
-                      icon: Icons.person_add,
-                      height: 36,
+                    CircleAvatar(
+                      radius: 18,
+                      backgroundColor: teamColor.withValues(alpha: 0.18),
+                      child: Text(
+                        team.shortName.length > 3 ? team.shortName.substring(0, 3) : team.shortName,
+                        style: TextStyle(
+                          color: teamColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 11,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            team.name,
+                            style: AppTextStyles.h3.copyWith(
+                              fontSize: 15,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            '${playingXi.length} of ${players.length} players selected',
+                            style: AppTextStyles.bodySmall.copyWith(
+                              color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        minimumSize: Size.zero,
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        side: BorderSide(color: AppColors.primary.withValues(alpha: 0.5)),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                      ),
+                      icon: const Icon(Icons.person_add_rounded, size: 15, color: AppColors.primary),
+                      label: const Text(
+                        'Add Player',
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: AppColors.primary),
+                      ),
                       onPressed: () => _promptAddPlayer(context, team.id),
                     ),
                   ],
                 ),
-              ),
-            )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: players.map((p) {
-                final isSelected = playingXi.contains(p.id);
-                return FilterChip(
-                  label: Text(
-                    '${p.name} (${p.role})',
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                      color: isSelected
-                          ? AppColors.primary
-                          : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                if (players.isNotEmpty) ...[
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            playingXi.clear();
+                            playingXi.addAll(players.map((p) => p.id));
+                          });
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Text(
+                            'Select All',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.primary),
+                          ),
+                        ),
+                      ),
+                      const Text(' • ', style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      InkWell(
+                        onTap: () {
+                          setState(() {
+                            playingXi.clear();
+                          });
+                        },
+                        child: const Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Text(
+                            'Clear',
+                            style: TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Colors.grey),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+                const SizedBox(height: 10),
+                if (players.isEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    child: Center(
+                      child: Column(
+                        children: [
+                          const Text('No players yet in this team.'),
+                          const SizedBox(height: 8),
+                          AppHeaderActionButton(
+                            label: 'Add Player to ${team.shortName}',
+                            icon: Icons.person_add_rounded,
+                            onPressed: () => _promptAddPlayer(context, team.id),
+                          ),
+                        ],
+                      ),
                     ),
+                  )
+                else
+                  Wrap(
+                    spacing: 8,
+                    runSpacing: 8,
+                    children: players.map((p) {
+                      final isSelected = playingXi.contains(p.id);
+                      return LongPressDraggable<Player>(
+                        data: p,
+                        delay: const Duration(milliseconds: 200),
+                        hapticFeedbackOnStart: true,
+                        feedback: Material(
+                          elevation: 8,
+                          borderRadius: BorderRadius.circular(12),
+                          color: Colors.transparent,
+                          child: Transform.rotate(
+                            angle: -0.04,
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.darkSurfaceElevated : Colors.white,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: AppColors.primary, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: AppColors.primary.withValues(alpha: 0.35),
+                                    blurRadius: 14,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(Icons.drag_indicator, size: 16, color: AppColors.primary),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    '#${p.jerseyNumber > 0 ? p.jerseyNumber : '—'} ${p.name}',
+                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.primary.withValues(alpha: 0.15),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      p.role,
+                                      style: const TextStyle(
+                                        fontSize: 10,
+                                        color: AppColors.primary,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        childWhenDragging: Opacity(
+                          opacity: 0.3,
+                          child: FilterChip(
+                            label: Text('#${p.jerseyNumber > 0 ? '${p.jerseyNumber} ' : ''}${p.name}'),
+                            selected: isSelected,
+                            onSelected: null,
+                          ),
+                        ),
+                        child: FilterChip(
+                          avatar: const Icon(Icons.drag_indicator, size: 14, color: Colors.grey),
+                          label: Text(
+                            '#${p.jerseyNumber > 0 ? '${p.jerseyNumber} ' : ''}${p.name} (${p.role})',
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
+                            ),
+                          ),
+                          selected: isSelected,
+                          showCheckmark: true,
+                          checkmarkColor: AppColors.primary,
+                          backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
+                          selectedColor: AppColors.primary.withValues(alpha: 0.12),
+                          side: BorderSide(
+                            color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                            width: isSelected ? 1.5 : 1,
+                          ),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                          onSelected: (val) {
+                            setState(() {
+                              if (val) {
+                                playingXi.add(p.id);
+                              } else {
+                                playingXi.remove(p.id);
+                              }
+                            });
+                          },
+                        ),
+                      );
+                    }).toList(),
                   ),
-                  selected: isSelected,
-                  showCheckmark: true,
-                  checkmarkColor: AppColors.primary,
-                  backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                  selectedColor: AppColors.primary.withValues(alpha: 0.12),
-                  side: BorderSide(
-                    color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                    width: isSelected ? 1.5 : 1,
-                  ),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                  padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                  onSelected: (val) {
-                    setState(() {
-                      if (val) {
-                        playingXi.add(p.id);
-                      } else {
-                        playingXi.remove(p.id);
-                      }
-                    });
-                  },
-                );
-              }).toList(),
+              ],
             ),
-        ],
-      ),
+          ),
+        );
+      },
     );
   }
 
@@ -1390,79 +1527,222 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     );
   }
 
-  void _promptAddPlayer(BuildContext context, String teamId, {String defaultRole = 'Batter'}) {
+  Future<void> _movePlayerToTeam(
+    BuildContext context,
+    Player player,
+    Team destinationTeam,
+    bool isDestinationTeamA,
+    CreateMatchDraft draft,
+  ) async {
+    final playerProv = context.read<PlayerProvider>();
+    final updated = await playerProv.changePlayerTeam(player.id, destinationTeam.id);
+
+    setState(() {
+      if (isDestinationTeamA) {
+        draft.teamBPlayingXi.remove(player.id);
+        if (draft.teamBCaptainId == player.id) draft.teamBCaptainId = null;
+        if (draft.teamBWkId == player.id) draft.teamBWkId = null;
+        if (!draft.teamAPlayingXi.contains(player.id)) {
+          draft.teamAPlayingXi.add(player.id);
+        }
+      } else {
+        draft.teamAPlayingXi.remove(player.id);
+        if (draft.teamACaptainId == player.id) draft.teamACaptainId = null;
+        if (draft.teamAWkId == player.id) draft.teamAWkId = null;
+        if (!draft.teamBPlayingXi.contains(player.id)) {
+          draft.teamBPlayingXi.add(player.id);
+        }
+      }
+    });
+
+    if (context.mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${player.name} moved to ${destinationTeam.name} (Jersey #${updated?.jerseyNumber ?? player.jerseyNumber})',
+          ),
+          duration: const Duration(seconds: 2),
+          backgroundColor: AppColors.success,
+        ),
+      );
+    }
+  }
+
+  void _promptAddPlayerChoice(BuildContext context, Team teamA, Team teamB) {
+    _promptAddPlayer(context, teamA.id, availableTeams: [teamA, teamB]);
+  }
+
+  void _promptAddPlayer(
+    BuildContext context,
+    String initialTeamId, {
+    List<Team>? availableTeams,
+    String defaultRole = 'Batter',
+  }) {
     final nameCtrl = TextEditingController();
+    final jerseyCtrl = TextEditingController();
+    final playerProv = context.read<PlayerProvider>();
+    String targetTeamId = initialTeamId;
     String role = defaultRole;
+
+    // Auto-generate unique random jersey 1-100 for team
+    jerseyCtrl.text = '${playerProv.generateRandomJerseyNumber(targetTeamId)}';
+
+    String? errorText;
 
     AppDialog.show(
       context: context,
-      title: 'Add Player to Squad',
+      title: 'Add Player to Match',
       content: StatefulBuilder(
         builder: (context, setDlgState) {
-          return Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              AppTextField(
-                label: 'Player Name',
-                hint: 'e.g. John Doe',
-                controller: nameCtrl,
-                autofocus: true,
-              ),
-              const SizedBox(height: 12),
-              AppDropdown<String>(
-                label: 'Role',
-                value: role,
-                items: ['Batter', 'Bowler', 'All Rounder', 'Wicket Keeper']
-                    .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                    .toList(),
-                onChanged: (v) {
-                  if (v != null) setDlgState(() => role = v);
-                },
-              ),
-            ],
+          final teamProv = context.read<TeamProvider>();
+          final teamsList = availableTeams ??
+              teamProv.teams.where((t) => t.id == targetTeamId).toList();
+
+          return SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                if (teamsList.length > 1) ...[
+                  AppDropdown<String>(
+                    label: 'Team',
+                    value: targetTeamId,
+                    items: teamsList.map((t) {
+                      return DropdownMenuItem(
+                        value: t.id,
+                        child: Text('${t.name} (${t.shortName})'),
+                      );
+                    }).toList(),
+                    onChanged: (v) {
+                      if (v != null) {
+                        setDlgState(() {
+                          targetTeamId = v;
+                          final newJersey = playerProv.generateRandomJerseyNumber(targetTeamId);
+                          jerseyCtrl.text = '$newJersey';
+                          errorText = null;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                ],
+                AppTextField(
+                  label: 'Player Name',
+                  hint: 'e.g. John Doe',
+                  controller: nameCtrl,
+                  autofocus: true,
+                  errorText: errorText,
+                  onChanged: (v) {
+                    if (errorText != null) {
+                      setDlgState(() => errorText = null);
+                    }
+                  },
+                ),
+                const SizedBox(height: 12),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: 2,
+                      child: AppTextField(
+                        label: 'Jersey # (1-100)',
+                        hint: '1-100',
+                        keyboardType: TextInputType.number,
+                        controller: jerseyCtrl,
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.casino_outlined, size: 18, color: AppColors.primary),
+                          tooltip: 'Randomize jersey',
+                          onPressed: () {
+                            setDlgState(() {
+                              jerseyCtrl.text = '${playerProv.generateRandomJerseyNumber(targetTeamId)}';
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      flex: 3,
+                      child: AppDropdown<String>(
+                        label: 'Role',
+                        value: role,
+                        items: ['Batter', 'Bowler', 'All Rounder', 'Wicketkeeper']
+                            .map((r) => DropdownMenuItem(value: r, child: Text(r)))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setDlgState(() => role = v);
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           );
         },
       ),
       confirmLabel: 'Add Player',
       onConfirm: () async {
         final name = nameCtrl.text.trim();
-        if (name.isNotEmpty) {
-          Navigator.of(context).pop();
-          final playerProv = context.read<PlayerProvider>();
-          final created = await playerProv.createPlayer(
-            teamId: teamId,
-            name: name,
-            jerseyNumber: 0,
-            role: role,
-            battingStyle: 'Right-hand bat',
-            bowlingStyle: role == 'Bowler' || role == 'All Rounder' ? 'Right-arm medium' : 'None',
-          );
-          if (mounted) {
-            setState(() {
-              final draft = context.read<MatchProvider>().draft;
-              if (draft.teamAId == teamId) {
-                if (!draft.teamAPlayingXi.contains(created.id)) {
-                  draft.teamAPlayingXi.add(created.id);
-                }
-              } else if (draft.teamBId == teamId) {
-                if (!draft.teamBPlayingXi.contains(created.id)) {
-                  draft.teamBPlayingXi.add(created.id);
-                }
-              }
+        if (name.isEmpty) return;
 
-              // Auto-assign to opener slots if empty
-              if (role == 'Bowler') {
-                draft.openingBowlerId ??= created.id;
-              } else {
-                if (draft.openingStrikerId == null) {
-                  draft.openingStrikerId = created.id;
-                } else if (draft.openingNonStrikerId == null || draft.openingNonStrikerId == draft.openingStrikerId) {
-                  draft.openingNonStrikerId = created.id;
-                }
-              }
-            });
-          }
+        // Validation
+        if (playerProv.isPlayerNameTaken(targetTeamId, name)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Player "$name" already exists in this team'),
+              backgroundColor: AppColors.error,
+            ),
+          );
+          return;
         }
+
+        int jersey = int.tryParse(jerseyCtrl.text.trim()) ?? 0;
+        if (jersey < 1 || jersey > 100 || playerProv.isJerseyNumberTaken(targetTeamId, jersey)) {
+          jersey = playerProv.generateRandomJerseyNumber(targetTeamId);
+        }
+
+        Navigator.of(context).pop();
+        final created = await playerProv.createPlayer(
+          teamId: targetTeamId,
+          name: name,
+          jerseyNumber: jersey,
+          role: role,
+          battingStyle: 'Right-hand bat',
+          bowlingStyle: role == 'Bowler' || role == 'All Rounder' ? 'Right-arm medium' : 'None',
+        );
+
+        if (!mounted) return;
+        setState(() {
+          final draft = context.read<MatchProvider>().draft;
+          if (draft.teamAId == targetTeamId) {
+            if (!draft.teamAPlayingXi.contains(created.id)) {
+              draft.teamAPlayingXi.add(created.id);
+            }
+          } else if (draft.teamBId == targetTeamId) {
+            if (!draft.teamBPlayingXi.contains(created.id)) {
+              draft.teamBPlayingXi.add(created.id);
+            }
+          }
+
+          // Auto-assign to opener slots if empty
+          if (role == 'Bowler') {
+            draft.openingBowlerId ??= created.id;
+          } else {
+            if (draft.openingStrikerId == null) {
+              draft.openingStrikerId = created.id;
+            } else if (draft.openingNonStrikerId == null || draft.openingNonStrikerId == draft.openingStrikerId) {
+              draft.openingNonStrikerId = created.id;
+            }
+          }
+        });
+
+        ScaffoldMessenger.of(this.context).showSnackBar(
+          SnackBar(
+            content: Text('${created.name} (Jersey #${created.jerseyNumber}) added and included in match!'),
+            backgroundColor: AppColors.success,
+          ),
+        );
       },
     );
   }

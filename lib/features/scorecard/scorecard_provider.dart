@@ -8,27 +8,12 @@ import '../../data/models/bowling_stat.dart';
 import '../../data/models/fall_of_wicket.dart';
 import '../../data/models/innings.dart';
 import '../../data/models/match.dart';
+import '../../data/models/over_summary.dart';
 import '../../data/models/partnership.dart';
 import '../../data/models/team.dart';
 import '../../data/repositories/match_repository.dart';
 import '../../data/repositories/scoring_repository.dart';
 import '../../data/repositories/team_repository.dart';
-
-class OverSummary {
-  final int overNumber;
-  final String bowlerName;
-  final int runs;
-  final int wickets;
-  final List<Ball> balls;
-
-  const OverSummary({
-    required this.overNumber,
-    required this.bowlerName,
-    required this.runs,
-    required this.wickets,
-    required this.balls,
-  });
-}
 
 class ScorecardProvider extends ChangeNotifier {
   final MatchRepository _matchRepo = MatchRepository();
@@ -207,6 +192,9 @@ class ScorecardProvider extends ChangeNotifier {
       allInnings: _allInnings,
       battingStatsMap: _battingStatsMap,
       bowlingStatsMap: _bowlingStatsMap,
+      fallOfWicketsMap: _fallOfWicketsMap,
+      partnershipsMap: _partnershipsMap,
+      overSummariesMap: _overSummariesMap,
     );
   }
 

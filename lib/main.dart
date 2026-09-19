@@ -37,6 +37,8 @@ void main() async {
   runApp(const CricketScorecardApp());
 }
 
+final RouteObserver<ModalRoute<void>> routeObserver = RouteObserver<ModalRoute<void>>();
+
 class CricketScorecardApp extends StatelessWidget {
   const CricketScorecardApp({super.key});
 
@@ -62,6 +64,7 @@ class CricketScorecardApp extends StatelessWidget {
             theme: AppTheme.lightTheme,
             darkTheme: AppTheme.darkTheme,
             themeMode: settings.themeMode,
+            navigatorObservers: [routeObserver],
             home: const SplashScreen(),
           );
         },

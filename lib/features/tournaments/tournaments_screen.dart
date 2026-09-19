@@ -26,14 +26,11 @@ class TournamentsScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Tournaments & Leagues'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: AppButton(
-              label: 'New Tournament',
-              icon: Icons.add,
-              height: 38,
-              onPressed: () => AddEditTournamentDialog.show(context),
-            ),
+          AppHeaderActionButton(
+            label: 'New Tournament',
+            icon: Icons.add_rounded,
+            margin: const EdgeInsets.only(right: 14),
+            onPressed: () => AddEditTournamentDialog.show(context),
           ),
         ],
       ),

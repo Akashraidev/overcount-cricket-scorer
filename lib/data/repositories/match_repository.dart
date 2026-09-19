@@ -1,6 +1,7 @@
 import 'package:sqflite/sqflite.dart';
 import '../database/database_service.dart';
 import '../database/db_tables.dart';
+import '../models/innings.dart';
 import '../models/match.dart';
 
 class MatchRepository {
@@ -118,5 +119,16 @@ class MatchRepository {
       'completed': completed,
       'upcoming': upcoming,
     };
+  }
+
+  Future<List<Innings>> getInningsForMatch(String matchId) async {
+    final db = await _dbService.database;
+    final maps = await db.query(
+      DbTables.innings,
+      where: 'matchId = ?',
+      whereArgs: [matchId],
+      orderBy: 'inningsNumber ASC',
+    );
+    return maps.map((m) => Innings.fromMap(m)).toList();
   }
 }

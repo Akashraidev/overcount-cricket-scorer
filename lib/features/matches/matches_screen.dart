@@ -37,18 +37,15 @@ class MatchesScreen extends StatelessWidget {
             tooltip: 'Join Live Match (Wi-Fi)',
             onPressed: () => JoinMatchDialog.show(context),
           ),
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: AppButton(
-              label: 'New Match',
-              icon: Icons.add,
-              height: 38,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
-                );
-              },
-            ),
+          AppHeaderActionButton(
+            label: 'New Match',
+            icon: Icons.add_rounded,
+            margin: const EdgeInsets.only(right: 14),
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
+              );
+            },
           ),
         ],
       ),
@@ -128,19 +125,26 @@ class MatchesScreen extends StatelessWidget {
                               match: m,
                               teamA: teamA,
                               teamB: teamB,
-                              onContinueScoring: () {
-                                Navigator.of(context).push(
+                              inningsList: matchProv.getInningsForMatch(m.id),
+                              onContinueScoring: () async {
+                                await Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) => LiveScoringScreen(matchId: m.id),
                                   ),
                                 );
+                                if (context.mounted) {
+                                  context.read<MatchProvider>().loadMatches(silent: true);
+                                }
                               },
-                              onViewScorecard: () {
-                                Navigator.of(context).push(
+                              onViewScorecard: () async {
+                                await Navigator.of(context).push(
                                   MaterialPageRoute(
                                     builder: (context) => MatchDetailScreen(matchId: m.id),
                                   ),
                                 );
+                                if (context.mounted) {
+                                  context.read<MatchProvider>().loadMatches(silent: true);
+                                }
                               },
                             );
                           },

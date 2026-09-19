@@ -153,26 +153,32 @@ class _InningsBreakDialogState extends State<InningsBreakDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            AppCard(
-              backgroundColor: AppColors.primary.withValues(alpha: 0.15),
-              borderColor: AppColors.primary,
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                children: [
-                  Text(
-                    '${widget.team1.name}: ${widget.completedInnings.totalRuns}/${widget.completedInnings.totalWickets} (${widget.completedInnings.oversDisplay} ov)',
-                    style: AppTextStyles.h3,
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    'TARGET: $target RUNS',
-                    style: AppTextStyles.scoreMedium.copyWith(color: AppColors.accent),
-                  ),
-                  Text(
-                    '${widget.team2.name} needs $target runs to win.',
-                    style: AppTextStyles.bodySmall,
-                  ),
-                ],
+            Center(
+              child: AppCard(
+                backgroundColor: AppColors.primary.withValues(alpha: 0.15),
+                borderColor: AppColors.primary,
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  children: [
+                    Text(
+                      '${widget.team1.name}: ${widget.completedInnings.totalRuns}/${widget.completedInnings.totalWickets} (${widget.completedInnings.oversDisplay} ov)',
+                      style: AppTextStyles.h3,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'TARGET: $target RUNS',
+                      style: AppTextStyles.scoreMedium.copyWith(color: AppColors.accent),
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      '${widget.team2.name} needs $target runs to win.',
+                      style: AppTextStyles.bodySmall,
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ),
               ),
             ),
             const SizedBox(height: 18),
@@ -180,9 +186,18 @@ class _InningsBreakDialogState extends State<InningsBreakDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Configure 2nd Innings Openers', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Expanded(
+                  child: Text(
+                    'Configure 2nd Innings Openers',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
                 if (widget.onAddNewPlayer != null)
                   TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
                     icon: const Icon(Icons.person_add, size: 14),
                     label: const Text('Add Batter'),
                     onPressed: () => _showAddPlayerDialog(widget.team2.id, widget.team2.shortName, true),
@@ -206,16 +221,19 @@ class _InningsBreakDialogState extends State<InningsBreakDialog> {
 
               // Swap Button
               Center(
-                child: OutlinedButton.icon(
-                  onPressed: () {
-                    setState(() {
-                      final temp = _strikerId;
-                      _strikerId = _nonStrikerId;
-                      _nonStrikerId = temp;
-                    });
-                  },
-                  icon: const Icon(Icons.swap_vert, size: 16),
-                  label: const Text('Swap Striker & Non-Striker'),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      setState(() {
+                        final temp = _strikerId;
+                        _strikerId = _nonStrikerId;
+                        _nonStrikerId = temp;
+                      });
+                    },
+                    icon: const Icon(Icons.swap_vert, size: 16),
+                    label: const Text('Swap Striker & Non-Striker'),
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -242,9 +260,18 @@ class _InningsBreakDialogState extends State<InningsBreakDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Opening Bowler', style: TextStyle(fontWeight: FontWeight.bold)),
+                const Expanded(
+                  child: Text(
+                    'Opening Bowler',
+                    style: TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                ),
                 if (widget.onAddNewPlayer != null)
                   TextButton.icon(
+                    style: TextButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      visualDensity: VisualDensity.compact,
+                    ),
                     icon: const Icon(Icons.person_add, size: 14),
                     label: const Text('Add Bowler'),
                     onPressed: () => _showAddPlayerDialog(widget.team1.id, widget.team1.shortName, false),

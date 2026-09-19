@@ -5,8 +5,10 @@ import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_spacing.dart';
 import '../../core/constants/app_text_styles.dart';
 import '../../core/widgets/app_button.dart';
+import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_dropdown.dart';
 import '../../core/widgets/app_text_field.dart';
+import '../../data/models/player.dart';
 import '../../core/widgets/empty_state.dart';
 import '../../core/widgets/loading_state.dart';
 import '../../core/widgets/player_tile.dart';
@@ -31,14 +33,11 @@ class PlayersScreen extends StatelessWidget {
       appBar: AppBar(
         title: const Text('Players Directory'),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: AppButton(
-              label: 'Add Player',
-              icon: Icons.person_add,
-              height: 38,
-              onPressed: () => AddEditPlayerDialog.show(context),
-            ),
+          AppHeaderActionButton(
+            label: 'Add Player',
+            icon: Icons.person_add_rounded,
+            margin: const EdgeInsets.only(right: 14),
+            onPressed: () => AddEditPlayerDialog.show(context),
           ),
         ],
       ),
@@ -130,10 +129,54 @@ class PlayersScreen extends StatelessWidget {
                                   ),
                                 );
                               },
-                              trailing: const Icon(
-                                Icons.chevron_right,
-                                size: 20,
-                                color: AppColors.primary,
+                              trailing: PopupMenuButton<String>(
+                                icon: const Icon(Icons.more_vert, size: 20),
+                                tooltip: 'Player options',
+                                onSelected: (val) {
+                                  if (val == 'change_team') {
+                                    _showChangeTeamDialog(context, p);
+                                  } else if (val == 'edit') {
+                                    AddEditPlayerDialog.show(context, playerToEdit: p);
+                                  } else if (val == 'profile') {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) => PlayerProfileScreen(playerId: p.id),
+                                      ),
+                                    );
+                                  }
+                                },
+                                itemBuilder: (context) => [
+                                  const PopupMenuItem(
+                                    value: 'change_team',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.swap_horiz_rounded, size: 18, color: AppColors.primary),
+                                        SizedBox(width: 8),
+                                        Text('Change Team'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'edit',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.edit_outlined, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('Edit Player'),
+                                      ],
+                                    ),
+                                  ),
+                                  const PopupMenuItem(
+                                    value: 'profile',
+                                    child: Row(
+                                      children: [
+                                        Icon(Icons.person_outline, size: 18),
+                                        SizedBox(width: 8),
+                                        Text('View Profile'),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
                             );
                           },
@@ -142,6 +185,85 @@ class PlayersScreen extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  void _showChangeTeamDialog(BuildContext context, Player player) {
+    final teams = context.read<TeamProvider>().teams;
+    final currentTeam = teams.cast<dynamic>().firstWhere(
+          (t) => t.id == player.teamId,
+          orElse: () => null,
+        );
+    String selectedTeamId = player.teamId;
+
+    AppDialog.show(
+      context: context,
+      title: 'Change Player Team',
+      content: StatefulBuilder(
+        builder: (context, setDlgState) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Player: ${player.name}',
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Current Team: ${currentTeam?.name ?? 'None'}',
+                style: const TextStyle(color: Colors.grey, fontSize: 13),
+              ),
+              const SizedBox(height: 16),
+              AppDropdown<String>(
+                label: 'New Team',
+                value: selectedTeamId,
+                items: teams.map((t) {
+                  return DropdownMenuItem(
+                    value: t.id,
+                    child: Text('${t.name} (${t.shortName})'),
+                  );
+                }).toList(),
+                onChanged: (v) {
+                  if (v != null) {
+                    setDlgState(() => selectedTeamId = v);
+                  }
+                },
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Jersey number will be kept if available, or automatically reallocated (1-100) if occupied in the new team.',
+                style: TextStyle(fontSize: 11, color: Colors.grey),
+              ),
+            ],
+          );
+        },
+      ),
+      confirmLabel: 'Update Team',
+      cancelLabel: 'Cancel',
+      onConfirm: () async {
+        if (selectedTeamId == player.teamId) {
+          Navigator.of(context).pop();
+          return;
+        }
+        final playerProv = context.read<PlayerProvider>();
+        final updated = await playerProv.changePlayerTeam(player.id, selectedTeamId);
+        if (context.mounted) {
+          Navigator.of(context).pop();
+          final newTeam = teams.cast<dynamic>().firstWhere(
+                (t) => t.id == selectedTeamId,
+                orElse: () => null,
+              );
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(
+                '${player.name} moved to ${newTeam?.name ?? 'new team'} (Jersey #${updated?.jerseyNumber ?? player.jerseyNumber})',
+              ),
+              backgroundColor: AppColors.success,
+            ),
+          );
+        }
+      },
     );
   }
 }

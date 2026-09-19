@@ -65,9 +65,9 @@ class EmptyState extends StatelessWidget {
             ),
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: 24),
-              AppButton(
+              AppButton.pill(
                 label: actionLabel!,
-                icon: Icons.add,
+                icon: Icons.add_rounded,
                 onPressed: onAction,
               ),
             ],

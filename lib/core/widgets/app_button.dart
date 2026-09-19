@@ -3,7 +3,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_radius.dart';
 import '../constants/app_text_styles.dart';
 
-enum AppButtonVariant { primary, secondary, outline, danger, text }
+enum AppButtonVariant { primary, secondary, outline, danger, text, pill }
 
 class AppButton extends StatelessWidget {
   final String label;
@@ -27,8 +27,54 @@ class AppButton extends StatelessWidget {
     this.width,
   });
 
+  /// Convenience constructor for the signature pill-shaped button
+  const AppButton.pill({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon = Icons.add_rounded,
+    this.isLoading = false,
+    this.isFullWidth = false,
+    this.height = 34,
+    this.width,
+  }) : variant = AppButtonVariant.pill;
+
   @override
   Widget build(BuildContext context) {
+    if (variant == AppButtonVariant.pill) {
+      final pillButton = FilledButton.icon(
+        onPressed: isLoading ? null : onPressed,
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+          disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+          minimumSize: Size(width ?? (isFullWidth ? double.infinity : 0), height ?? 34),
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.roundedFull),
+          elevation: 0,
+        ),
+        icon: isLoading
+            ? const SizedBox(
+                width: 14,
+                height: 14,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : Icon(icon ?? Icons.add_rounded, size: 18),
+        label: Text(
+          label,
+          style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+          overflow: TextOverflow.ellipsis,
+          maxLines: 1,
+        ),
+      );
+
+      if (isFullWidth) {
+        return SizedBox(width: double.infinity, child: pillButton);
+      }
+      return pillButton;
+    }
+
     Widget buttonChild;
     if (isLoading) {
       buttonChild = const SizedBox(
@@ -142,10 +188,74 @@ class AppButton extends StatelessWidget {
           child: buttonChild,
         );
         break;
+
+      case AppButtonVariant.pill:
+        // Handled at start of build method
+        button = const SizedBox.shrink();
+        break;
     }
 
     if (isFullWidth) {
       return SizedBox(width: double.infinity, child: button);
+    }
+    return button;
+  }
+}
+
+/// Signature header action button following the unified Dashboard 'New Match' design system:
+/// - Pill shape (AppRadius.roundedFull)
+/// - Height: 34px (minimumSize: Size(0, 34))
+/// - Background: AppColors.primary
+/// - Foreground: Colors.white
+/// - Rounded icon: 18px (default Icons.add_rounded)
+/// - Compact bold typography: 12.5px, w700, letterSpacing: 0.2
+/// - Padding: symmetric(horizontal: 12, vertical: 0)
+/// - Configurable [margin] (defaults to null or outer padding)
+class AppHeaderActionButton extends StatelessWidget {
+  final String label;
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final bool isLoading;
+  final EdgeInsetsGeometry? margin;
+
+  const AppHeaderActionButton({
+    super.key,
+    required this.label,
+    required this.onPressed,
+    this.icon = Icons.add_rounded,
+    this.isLoading = false,
+    this.margin,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final button = FilledButton.icon(
+      onPressed: isLoading ? null : onPressed,
+      style: FilledButton.styleFrom(
+        backgroundColor: AppColors.primary,
+        foregroundColor: Colors.white,
+        disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.5),
+        disabledForegroundColor: Colors.white.withValues(alpha: 0.7),
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 0),
+        minimumSize: const Size(0, 34),
+        shape: const RoundedRectangleBorder(borderRadius: AppRadius.roundedFull),
+        elevation: 0,
+      ),
+      icon: isLoading
+          ? const SizedBox(
+              width: 14,
+              height: 14,
+              child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+            )
+          : Icon(icon, size: 18),
+      label: Text(
+        label,
+        style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.w700, letterSpacing: 0.2),
+      ),
+    );
+
+    if (margin != null) {
+      return Padding(padding: margin!, child: button);
     }
     return button;
   }

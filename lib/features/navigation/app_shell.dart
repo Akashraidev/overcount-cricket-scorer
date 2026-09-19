@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../matches/match_provider.dart';
 import '../../core/constants/app_colors.dart';
 import '../../core/constants/app_radius.dart';
 import '../../core/constants/app_text_styles.dart';
@@ -11,6 +13,7 @@ import '../settings/settings_screen.dart';
 import '../statistics/statistics_screen.dart';
 import '../teams/teams_screen.dart';
 import '../tournaments/tournaments_screen.dart';
+import '../../core/widgets/app_button.dart';
 
 class AppShell extends StatefulWidget {
   final int initialIndex;
@@ -40,6 +43,9 @@ class _AppShellState extends State<AppShell> {
   }
 
   void _onDestinationSelected(int index) {
+    if (index == 0) {
+      context.read<MatchProvider>().loadMatches(silent: true);
+    }
     setState(() {
       _selectedIndex = index;
     });
@@ -169,20 +175,15 @@ class _AppShellState extends State<AppShell> {
           // Quick New Match Button
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: ElevatedButton.icon(
+            child: AppButton.pill(
+              label: 'New Match',
+              isFullWidth: true,
+              height: 38,
               onPressed: () {
                 Navigator.of(context).push(
                   MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
                 );
               },
-              icon: const Icon(Icons.add, size: 18),
-              label: const Text('New Match'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.primary,
-                foregroundColor: Colors.white,
-                minimumSize: const Size(double.infinity, 44),
-                shape: const RoundedRectangleBorder(borderRadius: AppRadius.roundedMd),
-              ),
             ),
           ),
 

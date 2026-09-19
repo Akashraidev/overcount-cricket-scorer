@@ -2,7 +2,6 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:path/path.dart';
 import 'package:path_provider/path_provider.dart';
-import 'package:sqflite/sqflite.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'db_tables.dart';
 
@@ -35,7 +34,7 @@ class DatabaseService {
 
     return await openDatabase(
       dbPath,
-      version: 1,
+      version: 2,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON;');
       },
@@ -43,6 +42,18 @@ class DatabaseService {
         for (final sql in DbTables.createTablesSql) {
           await db.execute(sql);
         }
+      },
+      onUpgrade: (db, oldVersion, newVersion) async {
+        if (oldVersion < 2) {
+          try {
+            await db.execute('ALTER TABLE ${DbTables.players} ADD COLUMN photoUrl TEXT;');
+          } catch (_) {}
+        }
+      },
+      onOpen: (db) async {
+        try {
+          await db.execute('ALTER TABLE ${DbTables.players} ADD COLUMN photoUrl TEXT;');
+        } catch (_) {}
       },
     );
   }

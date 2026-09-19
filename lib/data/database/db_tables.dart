@@ -48,6 +48,7 @@ class DbTables {
       bowlingStyle TEXT NOT NULL,
       isCaptain INTEGER NOT NULL DEFAULT 0,
       isWicketKeeper INTEGER NOT NULL DEFAULT 0,
+      photoUrl TEXT,
       createdAt INTEGER NOT NULL,
       FOREIGN KEY (teamId) REFERENCES $teams(id) ON DELETE CASCADE
     );

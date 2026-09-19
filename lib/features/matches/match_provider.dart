@@ -63,6 +63,7 @@ class MatchProvider extends ChangeNotifier {
   CricketMatch? _activeMatch;
   Innings? _activeMatchCurrentInnings;
   List<CricketMatch> _recentMatches = [];
+  Map<String, List<Innings>> _matchInnings = {};
   Map<String, int> _matchCounts = {'total': 0, 'live': 0, 'completed': 0, 'upcoming': 0};
   bool _isLoading = false;
   String _statusFilter = 'All';
@@ -85,6 +86,8 @@ class MatchProvider extends ChangeNotifier {
   CricketMatch? get activeMatch => _activeMatch;
   Innings? get activeMatchCurrentInnings => _activeMatchCurrentInnings;
   List<CricketMatch> get recentMatches => _recentMatches;
+  Map<String, List<Innings>> get matchInnings => _matchInnings;
+  List<Innings>? getInningsForMatch(String matchId) => _matchInnings[matchId];
   Map<String, int> get matchCounts => _matchCounts;
   bool get isLoading => _isLoading;
   String get statusFilter => _statusFilter;
@@ -111,9 +114,11 @@ class MatchProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> loadMatches() async {
-    _isLoading = true;
-    notifyListeners();
+  Future<void> loadMatches({bool silent = false}) async {
+    if (!silent) {
+      _isLoading = true;
+      notifyListeners();
+    }
     try {
       _matches = await _matchRepo.getAllMatches();
       _activeMatch = await _matchRepo.getLatestActiveMatch();
@@ -133,8 +138,21 @@ class MatchProvider extends ChangeNotifier {
       }
       _recentMatches = await _matchRepo.getRecentMatches(limit: 6);
       _matchCounts = await _matchRepo.getMatchCounts();
+
+      // Cache innings for active and recent matches to immediately display live runs/wickets/overs
+      final Set<String> matchIdsToLoad = {
+        if (_activeMatch != null) _activeMatch!.id,
+        ..._recentMatches.map((m) => m.id),
+      };
+      final Map<String, List<Innings>> newInningsMap = {};
+      for (final id in matchIdsToLoad) {
+        newInningsMap[id] = await _matchRepo.getInningsForMatch(id);
+      }
+      _matchInnings = newInningsMap;
     } finally {
-      _isLoading = false;
+      if (!silent) {
+        _isLoading = false;
+      }
       notifyListeners();
     }
   }

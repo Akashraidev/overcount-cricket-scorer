@@ -55,6 +55,9 @@ dependencies:
   printing: ^5.13.1
   share_plus: ^9.0.0
 
+  # Media & Photo
+  image_picker: ^1.1.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter

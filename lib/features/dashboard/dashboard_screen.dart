@@ -17,13 +17,51 @@ import '../players/player_provider.dart';
 import '../scorecard/match_detail_screen.dart';
 import '../scoring/live_scoring_screen.dart';
 import '../scoring/widgets/join_match_dialog.dart';
+import '../../main.dart';
 import '../teams/add_edit_team_dialog.dart';
 import '../teams/team_provider.dart';
 import '../tournaments/add_edit_tournament_dialog.dart';
 import '../tournaments/tournament_provider.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
+
+  @override
+  State<DashboardScreen> createState() => _DashboardScreenState();
+}
+
+class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) context.read<MatchProvider>().loadMatches(silent: true);
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    final route = ModalRoute.of(context);
+    if (route != null) {
+      routeObserver.subscribe(this, route);
+    }
+  }
+
+  @override
+  void dispose() {
+    routeObserver.unsubscribe(this);
+    super.dispose();
+  }
+
+  @override
+  void didPopNext() {
+    super.didPopNext();
+    // Automatically called when returning to dashboard from scoring or any screen
+    if (mounted) {
+      context.read<MatchProvider>().loadMatches(silent: true);
+    }
+  }
 
   String _getGreeting() {
     final hour = DateTime.now().hour;
@@ -62,18 +100,17 @@ class DashboardScreen extends StatelessWidget {
           ],
         ),
         actions: [
-          Padding(
-            padding: const EdgeInsets.only(right: 16),
-            child: AppButton(
-              label: 'New Match',
-              icon: Icons.add,
-              height: 38,
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
-                );
-              },
-            ),
+          AppHeaderActionButton(
+            label: 'New Match',
+            icon: Icons.add_rounded,
+            margin: const EdgeInsets.only(right: 14),
+            onPressed: () async {
+              await Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
+              );
+              if (!mounted) return;
+              this.context.read<MatchProvider>().loadMatches(silent: true);
+            },
           ),
         ],
       ),
@@ -146,10 +183,12 @@ class DashboardScreen extends StatelessWidget {
                         AppButton(
                           label: 'Create First Match',
                           icon: Icons.add,
-                          onPressed: () {
-                            Navigator.of(context).push(
+                          onPressed: () async {
+                            await Navigator.of(context).push(
                               MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
                             );
+                            if (!mounted) return;
+                            this.context.read<MatchProvider>().loadMatches(silent: true);
                           },
                         ),
                       ],
@@ -171,19 +210,24 @@ class DashboardScreen extends StatelessWidget {
                     match: m,
                     teamA: teamA,
                     teamB: teamB,
-                    onContinueScoring: () {
-                      Navigator.of(context).push(
+                    inningsList: matchProv.getInningsForMatch(m.id),
+                    onContinueScoring: () async {
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => LiveScoringScreen(matchId: m.id),
                         ),
                       );
+                      if (!mounted) return;
+                      this.context.read<MatchProvider>().loadMatches(silent: true);
                     },
-                    onViewScorecard: () {
-                      Navigator.of(context).push(
+                    onViewScorecard: () async {
+                      await Navigator.of(context).push(
                         MaterialPageRoute(
                           builder: (context) => MatchDetailScreen(matchId: m.id),
                         ),
                       );
+                      if (!mounted) return;
+                      this.context.read<MatchProvider>().loadMatches(silent: true);
                     },
                   );
                 }),
@@ -211,7 +255,7 @@ class DashboardScreen extends StatelessWidget {
           mainAxisSpacing: 12,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: constraints.maxWidth > 800 ? 2.2 : 1.7,
+          childAspectRatio: constraints.maxWidth > 800 ? 2.2 : 1.6,
           children: [
             StatTile(
               label: 'Matches',
@@ -267,7 +311,7 @@ class DashboardScreen extends StatelessWidget {
       borderColor: AppColors.primary,
       hasGlow: true,
       glowColor: AppColors.primary,
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -277,25 +321,26 @@ class DashboardScreen extends StatelessWidget {
               Row(
                 children: [
                   Container(
-                    width: 8,
-                    height: 8,
+                    width: 7,
+                    height: 7,
                     decoration: const BoxDecoration(
                       color: AppColors.liveRed,
                       shape: BoxShape.circle,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   Text(
                     'ONGOING MATCH',
                     style: AppTextStyles.label.copyWith(
                       color: AppColors.primaryLight,
                       fontWeight: FontWeight.bold,
+                      fontSize: 10.5,
                     ),
                   ),
                 ],
               ),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.2),
                   borderRadius: AppRadius.roundedSm,
@@ -305,26 +350,29 @@ class DashboardScreen extends StatelessWidget {
                   style: AppTextStyles.label.copyWith(
                     color: AppColors.primaryLight,
                     fontWeight: FontWeight.bold,
+                    fontSize: 10.5,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
           Text(
             '${teamA.name} vs ${teamB.name}',
-            style: AppTextStyles.h2.copyWith(
+            style: AppTextStyles.h3.copyWith(
+              fontSize: 17,
+              fontWeight: FontWeight.w700,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
           ),
-          const SizedBox(height: 4),
           Text(
             active.title,
             style: AppTextStyles.bodySmall.copyWith(
               color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+              fontSize: 11,
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
           if (inn != null) ...[
             Row(
               children: [
@@ -332,38 +380,53 @@ class DashboardScreen extends StatelessWidget {
                   '${inn.totalRuns}/${inn.totalWickets}',
                   style: AppTextStyles.scoreMedium.copyWith(
                     color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    fontSize: 28,
+                    fontSize: 30,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 12),
-                Text(
-                  '${inn.oversDisplay} Overs',
-                  style: AppTextStyles.bodyLarge.copyWith(
-                    color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                const SizedBox(width: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: isDark ? AppColors.darkSurfaceElevated : Colors.white,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
                   ),
-                ),
-                const Spacer(),
-                Text(
-                  'CRR: ${inn.currentRunRate.toStringAsFixed(2)}',
-                  style: AppTextStyles.bodyMedium.copyWith(
-                    color: AppColors.accent,
-                    fontWeight: FontWeight.bold,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        '${inn.oversDisplay} ov',
+                        style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                      ),
+                      const SizedBox(width: 6),
+                      Text(
+                        '•  CRR ${inn.currentRunRate.toStringAsFixed(2)}',
+                        style: AppTextStyles.bodySmall.copyWith(
+                          color: AppColors.accent,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
           ],
           AppButton(
             label: 'Continue Scoring',
             icon: Icons.play_arrow_rounded,
+            height: 40,
             isFullWidth: true,
-            onPressed: () {
-              Navigator.of(context).push(
+            onPressed: () async {
+              await Navigator.of(context).push(
                 MaterialPageRoute(
                   builder: (context) => LiveScoringScreen(matchId: active.id),
                 ),
               );
+              if (!mounted) return;
+              this.context.read<MatchProvider>().loadMatches(silent: true);
             },
           ),
         ],
@@ -385,10 +448,12 @@ class DashboardScreen extends StatelessWidget {
                 icon: Icons.sports_cricket,
                 label: 'New Match',
                 color: AppColors.primary,
-                onTap: () {
-                  Navigator.of(context).push(
+                onTap: () async {
+                  await Navigator.of(context).push(
                     MaterialPageRoute(builder: (context) => const CreateMatchWizard()),
                   );
+                  if (!mounted) return;
+                  this.context.read<MatchProvider>().loadMatches(silent: true);
                 },
               ),
             ),

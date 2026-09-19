@@ -8,6 +8,7 @@ class Player {
   final String bowlingStyle; // 'Right-arm fast', 'Right-arm medium', 'Right-arm spin', 'Left-arm fast', 'Left-arm spin', 'None'
   final bool isCaptain;
   final bool isWicketKeeper;
+  final String? photoUrl;
   final int createdAt;
 
   const Player({
@@ -20,6 +21,7 @@ class Player {
     this.bowlingStyle = 'None',
     this.isCaptain = false,
     this.isWicketKeeper = false,
+    this.photoUrl,
     required this.createdAt,
   });
 
@@ -34,6 +36,7 @@ class Player {
       'bowlingStyle': bowlingStyle,
       'isCaptain': isCaptain ? 1 : 0,
       'isWicketKeeper': isWicketKeeper ? 1 : 0,
+      'photoUrl': photoUrl,
       'createdAt': createdAt,
     };
   }
@@ -49,6 +52,7 @@ class Player {
       bowlingStyle: map['bowlingStyle'] as String? ?? 'None',
       isCaptain: map['isCaptain'] == 1 || map['isCaptain'] == true,
       isWicketKeeper: map['isWicketKeeper'] == 1 || map['isWicketKeeper'] == true,
+      photoUrl: map['photoUrl'] as String?,
       createdAt: map['createdAt'] != null ? (map['createdAt'] as int) : 0,
     );
   }
@@ -63,6 +67,7 @@ class Player {
     String? bowlingStyle,
     bool? isCaptain,
     bool? isWicketKeeper,
+    String? photoUrl,
     int? createdAt,
   }) {
     return Player(
@@ -75,6 +80,7 @@ class Player {
       bowlingStyle: bowlingStyle ?? this.bowlingStyle,
       isCaptain: isCaptain ?? this.isCaptain,
       isWicketKeeper: isWicketKeeper ?? this.isWicketKeeper,
+      photoUrl: photoUrl ?? this.photoUrl,
       createdAt: createdAt ?? this.createdAt,
     );
   }

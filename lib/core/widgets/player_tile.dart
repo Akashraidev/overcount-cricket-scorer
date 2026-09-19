@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import '../constants/app_colors.dart';
-import '../constants/app_radius.dart';
 import '../constants/app_text_styles.dart';
 import '../../data/models/player.dart';
 import 'app_card.dart';
+import 'player_avatar.dart';
 
 class PlayerTile extends StatelessWidget {
   final Player player;
@@ -44,24 +44,11 @@ class PlayerTile extends StatelessWidget {
           ],
 
           // Jersey / Avatar Circle
-          Container(
-            width: 40,
-            height: 40,
-            decoration: BoxDecoration(
-              color: isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurfaceElevated,
-              borderRadius: AppRadius.roundedFull,
-              border: Border.all(
-                color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
-              ),
-            ),
-            alignment: Alignment.center,
-            child: Text(
-              player.jerseyNumber > 0 ? '${player.jerseyNumber}' : player.name.substring(0, 1).toUpperCase(),
-              style: AppTextStyles.scoreSmall.copyWith(
-                color: AppColors.primary,
-                fontSize: 14,
-              ),
-            ),
+          PlayerAvatar(
+            name: player.name,
+            photoUrl: player.photoUrl,
+            jerseyNumber: player.jerseyNumber,
+            size: 40,
           ),
           const SizedBox(width: 12),
 
