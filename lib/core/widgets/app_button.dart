@@ -127,15 +127,24 @@ class AppButton extends StatelessWidget {
         break;
 
       case AppButtonVariant.secondary:
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         button = ElevatedButton(
           onPressed: isLoading ? null : onPressed,
           style: ElevatedButton.styleFrom(
-            backgroundColor: Theme.of(context).brightness == Brightness.dark
+            backgroundColor: isDark
                 ? AppColors.darkSurfaceElevated
                 : AppColors.lightSurfaceElevated,
-            foregroundColor: Theme.of(context).brightness == Brightness.dark
+            foregroundColor: isDark
                 ? AppColors.darkTextPrimary
                 : AppColors.lightTextPrimary,
+            disabledBackgroundColor: (isDark
+                    ? AppColors.darkSurfaceElevated
+                    : AppColors.lightSurfaceElevated)
+                .withValues(alpha: 0.5),
+            disabledForegroundColor: (isDark
+                    ? AppColors.darkTextMuted
+                    : AppColors.lightTextMuted)
+                .withValues(alpha: 0.6),
             elevation: 0,
             shape: const RoundedRectangleBorder(borderRadius: AppRadius.roundedMd),
             minimumSize: Size(width ?? (isFullWidth ? double.infinity : 64), height ?? 48),

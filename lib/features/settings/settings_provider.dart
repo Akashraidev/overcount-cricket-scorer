@@ -8,7 +8,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _keyHaptics = 'haptics_enabled';
   static const String _keyAutoCommentary = 'auto_commentary';
 
-  ThemeMode _themeMode = ThemeMode.dark;
+  ThemeMode _themeMode = ThemeMode.light;
   bool _hapticsEnabled = true;
   bool _autoCommentaryEnabled = true;
   bool _isLoading = false;

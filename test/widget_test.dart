@@ -29,6 +29,9 @@ import 'package:scorecard/core/utils/pdf_scorecard_generator.dart';
 import 'package:scorecard/data/models/match.dart';
 import 'package:scorecard/data/models/fall_of_wicket.dart';
 import 'package:scorecard/data/models/partnership.dart';
+import 'package:scorecard/features/settings/settings_provider.dart';
+import 'package:scorecard/features/settings/settings_screen.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();
@@ -1089,6 +1092,39 @@ void main() {
       final pdfBytes = await doc.save();
       expect(pdfBytes, isNotEmpty);
       expect(pdfBytes.length, greaterThan(1000));
+    });
+  });
+
+  group('Settings & Default Theme Tests', () {
+    test('SettingsProvider defaults to light mode when no preference stored', () async {
+      SharedPreferences.setMockInitialValues({});
+      final provider = SettingsProvider();
+      expect(provider.themeMode, ThemeMode.light);
+    });
+
+    testWidgets('SettingsScreen displays disabled Re-Seed Demo Data button with null onPressed', (tester) async {
+      SharedPreferences.setMockInitialValues({});
+      final settingsProvider = SettingsProvider();
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: ChangeNotifierProvider<SettingsProvider>.value(
+            value: settingsProvider,
+            child: const SettingsScreen(),
+          ),
+        ),
+      );
+
+      final buttonFinder = find.widgetWithText(AppButton, 'Re-Seed Sample Demo Data');
+      expect(buttonFinder, findsOneWidget);
+
+      final appButton = tester.widget<AppButton>(buttonFinder);
+      expect(appButton.onPressed, isNull);
+
+      // Verify tapping does nothing and does not trigger loading
+      await tester.tap(buttonFinder);
+      await tester.pump();
+      expect(settingsProvider.isLoading, isFalse);
     });
   });
 }

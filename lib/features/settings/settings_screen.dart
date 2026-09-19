@@ -47,20 +47,20 @@ class SettingsScreen extends StatelessWidget {
                     Expanded(
                       child: _themeOption(
                         context,
-                        title: 'Dark Mode',
-                        icon: Icons.dark_mode_outlined,
-                        isSelected: settings.themeMode == ThemeMode.dark,
-                        onTap: () => settings.setThemeMode(ThemeMode.dark),
+                        title: 'Light Mode',
+                        icon: Icons.light_mode_outlined,
+                        isSelected: settings.themeMode == ThemeMode.light,
+                        onTap: () => settings.setThemeMode(ThemeMode.light),
                       ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
                       child: _themeOption(
                         context,
-                        title: 'Light Mode',
-                        icon: Icons.light_mode_outlined,
-                        isSelected: settings.themeMode == ThemeMode.light,
-                        onTap: () => settings.setThemeMode(ThemeMode.light),
+                        title: 'Dark Mode',
+                        icon: Icons.dark_mode_outlined,
+                        isSelected: settings.themeMode == ThemeMode.dark,
+                        onTap: () => settings.setThemeMode(ThemeMode.dark),
                       ),
                     ),
                     const SizedBox(width: 8),
@@ -91,7 +91,7 @@ class SettingsScreen extends StatelessWidget {
                   title: const Text('Touch Haptic Feedback'),
                   subtitle: const Text('Vibrate subtly on score pad and boundary taps'),
                   value: settings.hapticsEnabled,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (v) => settings.setHapticsEnabled(v),
                 ),
                 const Divider(height: 1),
@@ -99,7 +99,7 @@ class SettingsScreen extends StatelessWidget {
                   title: const Text('Dynamic Ball Commentary'),
                   subtitle: const Text('Auto-generate cricket commentary for deliveries and wickets'),
                   value: settings.autoCommentaryEnabled,
-                  activeColor: AppColors.primary,
+                  activeThumbColor: AppColors.primary,
                   onChanged: (v) => settings.setAutoCommentaryEnabled(v),
                 ),
               ],
@@ -129,13 +129,16 @@ class SettingsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                AppButton(
-                  label: 'Re-Seed Sample Demo Data',
-                  icon: Icons.restore_page_outlined,
-                  variant: AppButtonVariant.secondary,
-                  isFullWidth: true,
-                  isLoading: settings.isLoading,
-                  onPressed: () => _confirmReseed(context, settings),
+                const Opacity(
+                  opacity: 0.5,
+                  child: AppButton(
+                    label: 'Re-Seed Sample Demo Data',
+                    icon: Icons.restore_page_outlined,
+                    variant: AppButtonVariant.secondary,
+                    isFullWidth: true,
+                    isLoading: false,
+                    onPressed: null,
+                  ),
                 ),
               ],
             ),
@@ -209,6 +212,7 @@ class SettingsScreen extends StatelessWidget {
     );
   }
 
+  // ignore: unused_element
   void _confirmReseed(BuildContext context, SettingsProvider settings) {
     AppDialog.show(
       context: context,
@@ -220,17 +224,22 @@ class SettingsScreen extends StatelessWidget {
       cancelLabel: 'Cancel',
       isDestructive: true,
       onConfirm: () async {
-        Navigator.of(context).pop();
+        final navigator = Navigator.of(context);
+        final messenger = ScaffoldMessenger.of(context);
+        final teamProvider = context.read<TeamProvider>();
+        final playerProvider = context.read<PlayerProvider>();
+        final tournamentProvider = context.read<TournamentProvider>();
+        final matchProvider = context.read<MatchProvider>();
+
+        navigator.pop();
         await settings.resetAndReseedDatabase();
-        if (context.mounted) {
-          await context.read<TeamProvider>().loadTeams();
-          await context.read<PlayerProvider>().loadPlayers();
-          await context.read<TournamentProvider>().loadTournaments();
-          await context.read<MatchProvider>().loadMatches();
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Sample data seeded successfully!')),
-          );
-        }
+        await teamProvider.loadTeams();
+        await playerProvider.loadPlayers();
+        await tournamentProvider.loadTournaments();
+        await matchProvider.loadMatches();
+        messenger.showSnackBar(
+          const SnackBar(content: Text('Sample data seeded successfully!')),
+        );
       },
     );
   }
