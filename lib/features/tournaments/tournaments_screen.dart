@@ -60,25 +60,25 @@ class TournamentsScreen extends StatelessWidget {
                             ),
                           );
                         },
-                        padding: const EdgeInsets.all(16),
-                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        margin: const EdgeInsets.only(bottom: 8),
                         child: Row(
                           children: [
                             Container(
-                              width: 48,
-                              height: 48,
+                              width: 40,
+                              height: 40,
                               decoration: BoxDecoration(
                                 color: AppColors.boundary6.withValues(alpha: 0.15),
-                                borderRadius: AppRadius.roundedMd,
+                                borderRadius: AppRadius.roundedSm,
                                 border: Border.all(color: AppColors.boundary6),
                               ),
                               child: const Icon(
                                 Icons.emoji_events,
                                 color: AppColors.boundary6,
-                                size: 26,
+                                size: 22,
                               ),
                             ),
-                            const SizedBox(width: 14),
+                            const SizedBox(width: 12),
                             Expanded(
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +90,7 @@ class TournamentsScreen extends StatelessWidget {
                                           t.name,
                                           style: AppTextStyles.h3.copyWith(
                                             color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                                            fontSize: 16,
+                                            fontSize: 15,
                                           ),
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,

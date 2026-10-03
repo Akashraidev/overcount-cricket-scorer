@@ -21,7 +21,7 @@ class CurrentOverTrack extends StatelessWidget {
     final totalRunsInOver = balls.fold<int>(0, (sum, b) => sum + b.totalRuns);
 
     return AppCard(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -33,6 +33,7 @@ class CurrentOverTrack extends StatelessWidget {
                 style: AppTextStyles.label.copyWith(
                   color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                   letterSpacing: 0.8,
+                  fontSize: 10.5,
                 ),
               ),
               Text(
@@ -40,11 +41,12 @@ class CurrentOverTrack extends StatelessWidget {
                 style: AppTextStyles.label.copyWith(
                   color: AppColors.primary,
                   fontWeight: FontWeight.bold,
+                  fontSize: 11,
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           if (balls.isEmpty)
             Text(
@@ -52,6 +54,7 @@ class CurrentOverTrack extends StatelessWidget {
               style: AppTextStyles.bodySmall.copyWith(
                 color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
                 fontStyle: FontStyle.italic,
+                fontSize: 11,
               ),
             )
           else
@@ -60,12 +63,12 @@ class CurrentOverTrack extends StatelessWidget {
               child: Row(
                 children: balls.map((b) {
                   return Padding(
-                    padding: const EdgeInsets.only(right: 8),
+                    padding: const EdgeInsets.only(right: 6),
                     child: ScoreBadge.fromBall(
                       runs: b.runsBat,
                       extraType: b.extraType,
                       isWicket: b.isWicket,
-                      size: 34,
+                      size: 30,
                     ),
                   );
                 }).toList(),

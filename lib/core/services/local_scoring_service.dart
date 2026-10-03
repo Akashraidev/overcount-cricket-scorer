@@ -53,6 +53,26 @@ class LocalScoringService {
   LiveMatchSnapshot? get latestSnapshot => _latestSnapshot;
   List<DiscoveredMatchBeacon> get discoveredMatches => _discoveredMatches.values.toList();
 
+  String? get qrPayload {
+    if (!isHosting || _hostIp == null || _pinCode == null) return null;
+    return 'scorecard://live?host=$_hostIp&port=$_actualPort&pin=$_pinCode';
+  }
+
+  static ({String host, int port, String pin})? parseQrPayload(String raw) {
+    try {
+      final uri = Uri.parse(raw.trim());
+      if (uri.scheme == 'scorecard' && uri.host == 'live') {
+        final host = uri.queryParameters['host'];
+        final port = int.tryParse(uri.queryParameters['port'] ?? '') ?? defaultHttpPort;
+        final pin = uri.queryParameters['pin'];
+        if (host != null && host.isNotEmpty && pin != null && pin.isNotEmpty) {
+          return (host: host, port: port, pin: pin);
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
   // -------------------------------------------------------------
   // IP UTILITIES
   // -------------------------------------------------------------
@@ -62,12 +82,65 @@ class LocalScoringService {
         type: InternetAddressType.IPv4,
         includeLinkLocal: false,
       );
+
+      final candidates = <({String ip, int score})>[];
+
       for (final iface in interfaces) {
+        final name = iface.name.toLowerCase();
         for (final addr in iface.addresses) {
-          if (!addr.isLoopback) {
-            return addr.address;
+          if (addr.isLoopback) continue;
+          final ip = addr.address;
+
+          int score = 50;
+
+          // Priority 1: Direct Mobile Hotspot Gateway IP (Android 192.168.43.1 or iOS 172.20.10.1)
+          if (ip == '192.168.43.1' || ip == '172.20.10.1') {
+            score = 100;
           }
+          // Priority 2: Hotspot/Tethering interface names (ap, swlan, rndis, tether, softap, hotspot)
+          else if (name.contains('ap') ||
+              name.contains('swlan') ||
+              name.contains('tether') ||
+              name.contains('rndis') ||
+              name.contains('softap') ||
+              name.contains('hotspot') ||
+              name.contains('p2p')) {
+            score = 90;
+          }
+          // Priority 3: Standard hotspot subnets (192.168.43.x or 172.20.10.x)
+          else if (ip.startsWith('192.168.43.') || ip.startsWith('172.20.10.')) {
+            score = 85;
+          }
+          // Priority 4: Standard Wi-Fi / LAN client interfaces (wlan, eth, en, wifi)
+          else if (name.contains('wlan') ||
+              name.contains('eth') ||
+              name.contains('en') ||
+              name.contains('wifi') ||
+              name.contains('wi-fi')) {
+            score = 75;
+          }
+          // Priority 5: Common private LAN subnets (192.168.x.x, 10.x.x.x, 172.16-31.x.x)
+          else if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
+            score = 60;
+          }
+
+          // Deprioritize Cellular / Mobile carrier interfaces (rmnet, ccmni, pdp, wwan)
+          if (name.contains('rmnet') ||
+              name.contains('ccmni') ||
+              name.contains('pdp') ||
+              name.contains('wwan') ||
+              name.contains('mobile') ||
+              name.contains('cellular')) {
+            score = 10;
+          }
+
+          candidates.add((ip: ip, score: score));
         }
+      }
+
+      if (candidates.isNotEmpty) {
+        candidates.sort((a, b) => b.score.compareTo(a.score));
+        return candidates.first.ip;
       }
     } catch (e) {
       debugPrint('[LocalScoring] Error getting local IP: $e');
@@ -406,7 +479,12 @@ class LocalScoringService {
       }
     }
 
-    // 2. If not found, wait up to 1.5 seconds on discovery socket
+    // 2. Fast-Path for Mobile Hotspot: Check common Hotspot Gateway IPs first (< 15ms)
+    if (resolvedHostIp == null || resolvedHostIp.isEmpty) {
+      resolvedHostIp = await _checkHotspotGateways(_targetPin!);
+    }
+
+    // 3. If not found, wait up to 1.5 seconds on discovery socket
     if (resolvedHostIp == null || resolvedHostIp.isEmpty) {
       await startBeaconDiscovery();
       for (int i = 0; i < 15; i++) {
@@ -420,7 +498,7 @@ class LocalScoringService {
       }
     }
 
-    // 3. Fallback: Subnet Fast Scan on local Wi-Fi
+    // 4. Fallback: Subnet Fast Scan on local Wi-Fi
     if (resolvedHostIp == null || resolvedHostIp.isEmpty) {
       resolvedHostIp = await _scanSubnetForPin(_targetPin!);
     }
@@ -428,7 +506,7 @@ class LocalScoringService {
     if (resolvedHostIp == null || resolvedHostIp.isEmpty) {
       _setViewerStatus(
         ViewerConnectionStatus.disconnected,
-        error: 'Host match not found on Wi-Fi. Ensure both devices are on the same Wi-Fi network and the 6-digit code is correct.',
+        error: 'Host match not found on Wi-Fi/Hotspot. Ensure both devices are connected to the same network or host hotspot, and the 6-digit code is correct.',
       );
       return false;
     }
@@ -437,6 +515,41 @@ class LocalScoringService {
     _targetPort = resolvedPort;
 
     return await _performWebSocketConnect();
+  }
+
+  Future<String?> _checkHotspotGateways(String pin) async {
+    try {
+      final myIp = await getLocalIpAddress();
+      final candidates = <String>{
+        '192.168.43.1', // Android Hotspot default gateway
+        '172.20.10.1',  // iOS Hotspot default gateway
+      };
+
+      if (myIp != null && myIp.contains('.')) {
+        final parts = myIp.split('.');
+        if (parts.length == 4) {
+          candidates.add('${parts[0]}.${parts[1]}.${parts[2]}.1'); // Subnet default router/AP
+        }
+      }
+
+      final client = HttpClient()..connectionTimeout = const Duration(milliseconds: 600);
+      for (final ip in candidates) {
+        try {
+          final req = await client.getUrl(Uri.parse('http://$ip:$defaultHttpPort/ping'));
+          final res = await req.close();
+          if (res.statusCode == 200) {
+            final body = await res.transform(utf8.decoder).join();
+            final map = jsonDecode(body) as Map<String, dynamic>;
+            if (map['pin']?.toString() == pin) {
+              client.close(force: true);
+              return ip;
+            }
+          }
+        } catch (_) {}
+      }
+      client.close(force: true);
+    } catch (_) {}
+    return null;
   }
 
   Future<String?> _scanSubnetForPin(String pin) async {
@@ -451,9 +564,9 @@ class LocalScoringService {
       final client = HttpClient()..connectionTimeout = const Duration(milliseconds: 900);
       final completer = Completer<String?>();
 
-      // Scan common and nearby IPs first (e.g. within +/- 30 of current IP)
+      // Scan gateway (.1) first, then nearby IPs within +/- 30 of current IP
       final myLast = int.tryParse(parts[3]) ?? 100;
-      final priorities = <int>[];
+      final priorities = <int>[1]; // Hotspot router gateway is index 1
       for (int delta = 1; delta <= 30; delta++) {
         if (myLast - delta > 1) priorities.add(myLast - delta);
         if (myLast + delta < 254) priorities.add(myLast + delta);

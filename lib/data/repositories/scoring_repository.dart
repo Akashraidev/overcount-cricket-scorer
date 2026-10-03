@@ -220,9 +220,9 @@ class ScoringRepository {
   Future<void> undoBallTransaction({
     required String ballId,
     required Innings revertedInnings,
-    required BattingStat strikerStat,
+    BattingStat? strikerStat,
     BattingStat? nonStrikerStat,
-    required BowlingStat bowlerStat,
+    BowlingStat? bowlerStat,
     Partnership? updatedPartnership,
     String? fowIdToDelete,
   }) async {
@@ -244,11 +244,13 @@ class ScoringRepository {
       );
 
       // 3. Update Striker Stat
-      await txn.insert(
-        DbTables.battingStats,
-        strikerStat.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      if (strikerStat != null) {
+        await txn.insert(
+          DbTables.battingStats,
+          strikerStat.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
 
       // 4. Update Non-Striker Stat
       if (nonStrikerStat != null) {
@@ -260,11 +262,13 @@ class ScoringRepository {
       }
 
       // 5. Update Bowler Stat
-      await txn.insert(
-        DbTables.bowlingStats,
-        bowlerStat.toMap(),
-        conflictAlgorithm: ConflictAlgorithm.replace,
-      );
+      if (bowlerStat != null) {
+        await txn.insert(
+          DbTables.bowlingStats,
+          bowlerStat.toMap(),
+          conflictAlgorithm: ConflictAlgorithm.replace,
+        );
+      }
 
       // 6. Update Partnership
       if (updatedPartnership != null) {

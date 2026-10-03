@@ -49,7 +49,9 @@ class LiveScoreBanner extends StatelessWidget {
       gradient: isDark ? AppColors.liveHeaderGradient : null,
       backgroundColor: isDark ? null : Colors.white,
       borderColor: AppColors.primary,
-      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 16),
+      hasGlow: true,
+      glowColor: AppColors.primary,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -57,29 +59,37 @@ class LiveScoreBanner extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Row(
-                children: [
-                  Container(
-                    width: 12,
-                    height: 12,
-                    decoration: BoxDecoration(
-                      color: teamColor,
-                      shape: BoxShape.circle,
+              Expanded(
+                child: Row(
+                  children: [
+                    Container(
+                      width: 10,
+                      height: 10,
+                      decoration: BoxDecoration(
+                        color: teamColor,
+                        shape: BoxShape.circle,
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    battingTeam.name.toUpperCase(),
-                    style: AppTextStyles.label.copyWith(
-                      color: AppColors.primaryLight,
-                      letterSpacing: 1.2,
-                      fontWeight: FontWeight.w800,
+                    const SizedBox(width: 7),
+                    Expanded(
+                      child: Text(
+                        battingTeam.name.toUpperCase(),
+                        style: AppTextStyles.label.copyWith(
+                          color: AppColors.primaryLight,
+                          letterSpacing: 1.1,
+                          fontWeight: FontWeight.w800,
+                          fontSize: 11,
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
+              const SizedBox(width: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: 0.15),
                   borderRadius: AppRadius.roundedSm,
@@ -89,34 +99,48 @@ class LiveScoreBanner extends StatelessWidget {
                   style: AppTextStyles.label.copyWith(
                     color: AppColors.primary,
                     fontWeight: FontWeight.bold,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Main Big Score & Overs Display
           Row(
             crossAxisAlignment: CrossAxisAlignment.baseline,
             textBaseline: TextBaseline.alphabetic,
             children: [
-              // Runs
-              AnimatedScoreCounter(
-                count: innings.totalRuns,
-                style: AppTextStyles.scoreDisplay.copyWith(
-                  color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                  fontSize: 44,
+              Expanded(
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.baseline,
+                    textBaseline: TextBaseline.alphabetic,
+                    children: [
+                      // Runs
+                      AnimatedScoreCounter(
+                        count: innings.totalRuns,
+                        style: AppTextStyles.scoreDisplay.copyWith(
+                          color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                          fontSize: 38,
+                        ),
+                      ),
+                      Text(
+                        ' / ${innings.totalWickets}',
+                        style: AppTextStyles.scoreMedium.copyWith(
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                          fontSize: 24,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-              Text(
-                ' / ${innings.totalWickets}',
-                style: AppTextStyles.scoreMedium.copyWith(
-                  color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                  fontSize: 28,
-                ),
-              ),
-              const Spacer(),
+              const SizedBox(width: 8),
               // Overs
               Column(
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -125,14 +149,15 @@ class LiveScoreBanner extends StatelessWidget {
                     '${innings.oversDisplay} / ${match.totalOvers}',
                     style: AppTextStyles.scoreMedium.copyWith(
                       color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                      fontSize: 22,
+                      fontSize: 20,
                     ),
                   ),
                   Text(
                     'OVERS',
                     style: AppTextStyles.label.copyWith(
                       color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                      fontSize: 10,
+                      fontSize: 9.5,
+                      letterSpacing: 0.8,
                     ),
                   ),
                 ],
@@ -140,7 +165,7 @@ class LiveScoreBanner extends StatelessWidget {
             ],
           ),
 
-          const Divider(height: 20),
+          const Divider(height: 10),
 
           // Rates & Target Bar
           Row(

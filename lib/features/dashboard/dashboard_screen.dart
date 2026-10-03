@@ -114,56 +114,60 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
           ),
         ],
       ),
-      body: RefreshIndicator(
-        onRefresh: () async {
-          await matchProv.loadMatches();
-          await teamProv.loadTeams();
-          await playerProv.loadPlayers();
-          await tourneyProv.loadTournaments();
-        },
-        child: SingleChildScrollView(
-          physics: const AlwaysScrollableScrollPhysics(),
-          padding: AppSpacing.screenPadding,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Summary Metric Tiles Grid
-              _buildMetricsGrid(
-                context,
-                matchesCount: matchProv.matchCounts['total'] ?? 0,
-                teamsCount: teamProv.teams.length,
-                playersCount: playerProv.players.length,
-                tourneysCount: tourneyProv.tournaments.length,
-                isDesktop: isDesktop,
-              ),
-              const SizedBox(height: 24),
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: isDark ? AppColors.darkScreenGradient : AppColors.lightScreenGradient,
+        ),
+        child: RefreshIndicator(
+          onRefresh: () async {
+            await matchProv.loadMatches();
+            await teamProv.loadTeams();
+            await playerProv.loadPlayers();
+            await tourneyProv.loadTournaments();
+          },
+          child: SingleChildScrollView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: AppSpacing.screenPadding,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // 1. Summary Metric Tiles Grid
+                _buildMetricsGrid(
+                  context,
+                  matchesCount: matchProv.matchCounts['total'] ?? 0,
+                  teamsCount: teamProv.teams.length,
+                  playersCount: playerProv.players.length,
+                  tourneysCount: tourneyProv.tournaments.length,
+                  isDesktop: isDesktop,
+                ),
+                const SizedBox(height: 14),
 
-              // 2. Continue Live Match Card (if available)
-              if (matchProv.activeMatch != null) ...[
-                _buildContinueMatchCard(context, matchProv, teamProv),
-                const SizedBox(height: 24),
-              ],
+                // 2. Continue Live Match Card (if available)
+                if (matchProv.activeMatch != null) ...[
+                  _buildContinueMatchCard(context, matchProv, teamProv),
+                  const SizedBox(height: 14),
+                ],
 
-              // 3. Quick Actions
-              _buildQuickActions(context),
-              const SizedBox(height: 24),
+                // 3. Quick Actions (includes hotspot sharing)
+                _buildQuickActions(context),
+                const SizedBox(height: 14),
 
-              // 4. Recent Matches List
-              SectionHeader(
-                title: 'Recent Matches',
-                actionLabel: 'View All',
-                onAction: () {
-                  // Navigate to Matches tab in shell or list
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (context) => const Scaffold(
-                        body: SafeArea(child: Text('Matches')),
+                // 4. Recent Matches List
+                SectionHeader(
+                  title: 'Recent Matches',
+                  actionLabel: 'View All',
+                  onAction: () {
+                    // Navigate to Matches tab in shell or list
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (context) => const Scaffold(
+                          body: SafeArea(child: Text('Matches')),
+                        ),
                       ),
-                    ),
-                  );
-                },
-              ),
-              const SizedBox(height: 12),
+                    );
+                  },
+                ),
+                const SizedBox(height: 8),
 
               if (matchProv.recentMatches.isEmpty)
                 AppCard(
@@ -235,8 +239,9 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
           ),
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildMetricsGrid(
     BuildContext context, {
@@ -251,11 +256,11 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
         final crossAxisCount = constraints.maxWidth > 800 ? 4 : 2;
         return GridView.count(
           crossAxisCount: crossAxisCount,
-          crossAxisSpacing: 12,
-          mainAxisSpacing: 12,
+          crossAxisSpacing: 10,
+          mainAxisSpacing: 10,
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
-          childAspectRatio: constraints.maxWidth > 800 ? 2.2 : 1.6,
+          childAspectRatio: constraints.maxWidth > 800 ? 2.5 : 2.0,
           children: [
             StatTile(
               label: 'Matches',
@@ -307,11 +312,11 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
 
     return AppCard(
       gradient: isDark ? AppColors.heroCardGradient : null,
-      backgroundColor: isDark ? null : const Color(0xFFE8F5E9),
+      backgroundColor: isDark ? null : const Color(0xFFF1F8F5),
       borderColor: AppColors.primary,
       hasGlow: true,
       glowColor: AppColors.primary,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -350,17 +355,17 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
                   style: AppTextStyles.label.copyWith(
                     color: AppColors.primaryLight,
                     fontWeight: FontWeight.bold,
-                    fontSize: 10.5,
+                    fontSize: 10,
                   ),
                 ),
               ),
             ],
           ),
-          const SizedBox(height: 8),
+          const SizedBox(height: 6),
           Text(
             '${teamA.name} vs ${teamB.name}',
             style: AppTextStyles.h3.copyWith(
-              fontSize: 17,
+              fontSize: 15.5,
               fontWeight: FontWeight.w700,
               color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
             ),
@@ -372,7 +377,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
               fontSize: 11,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
           if (inn != null) ...[
             Row(
               children: [
@@ -380,13 +385,13 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
                   '${inn.totalRuns}/${inn.totalWickets}',
                   style: AppTextStyles.scoreMedium.copyWith(
                     color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    fontSize: 30,
+                    fontSize: 24,
                     fontWeight: FontWeight.w800,
                   ),
                 ),
-                const SizedBox(width: 10),
+                const SizedBox(width: 8),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
                   decoration: BoxDecoration(
                     color: isDark ? AppColors.darkSurfaceElevated : Colors.white,
                     borderRadius: BorderRadius.circular(6),
@@ -397,14 +402,15 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
                     children: [
                       Text(
                         '${inn.oversDisplay} ov',
-                        style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600),
+                        style: AppTextStyles.bodySmall.copyWith(fontWeight: FontWeight.w600, fontSize: 11),
                       ),
-                      const SizedBox(width: 6),
+                      const SizedBox(width: 5),
                       Text(
                         '•  CRR ${inn.currentRunRate.toStringAsFixed(2)}',
                         style: AppTextStyles.bodySmall.copyWith(
                           color: AppColors.accent,
                           fontWeight: FontWeight.bold,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -412,12 +418,12 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 8),
           ],
           AppButton(
             label: 'Continue Scoring',
             icon: Icons.play_arrow_rounded,
-            height: 40,
+            height: 36,
             isFullWidth: true,
             onPressed: () async {
               await Navigator.of(context).push(
@@ -439,7 +445,7 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SectionHeader(title: 'Quick Actions'),
-        const SizedBox(height: 12),
+        const SizedBox(height: 8),
         Row(
           children: [
             Expanded(
@@ -489,45 +495,45 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
             ),
           ],
         ),
-        const SizedBox(height: 12),
-        // Join Wi-Fi Live Match Action Card
+        const SizedBox(height: 8),
+        // Join Wi-Fi Live Match Action Card (Compact & connected)
         InkWell(
           onTap: () => JoinMatchDialog.show(context),
-          borderRadius: BorderRadius.circular(12),
+          borderRadius: BorderRadius.circular(10),
           child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
             decoration: BoxDecoration(
               color: AppColors.primary.withValues(alpha: 0.08),
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: AppColors.primary.withValues(alpha: 0.22)),
             ),
             child: Row(
               children: [
                 Container(
-                  padding: const EdgeInsets.all(8),
+                  padding: const EdgeInsets.all(6),
                   decoration: BoxDecoration(
                     color: AppColors.primary,
-                    borderRadius: BorderRadius.circular(8),
+                    borderRadius: BorderRadius.circular(6),
                   ),
-                  child: const Icon(Icons.wifi_tethering_rounded, color: Colors.white, size: 20),
+                  child: const Icon(Icons.wifi_tethering_rounded, color: Colors.white, size: 17),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 10),
                 const Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         'Join Live Match on Wi-Fi',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12.5),
                       ),
                       Text(
                         'Enter 6-digit code to spectate live scorecard (Read-Only)',
-                        style: TextStyle(fontSize: 11, color: Colors.grey),
+                        style: TextStyle(fontSize: 10.5, color: Colors.grey),
                       ),
                     ],
                   ),
                 ),
-                const Icon(Icons.arrow_forward_ios_rounded, size: 14, color: AppColors.primary),
+                const Icon(Icons.arrow_forward_ios_rounded, size: 13, color: AppColors.primary),
               ],
             ),
           ),
@@ -547,19 +553,19 @@ class _DashboardScreenState extends State<DashboardScreen> with RouteAware {
 
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+      padding: const EdgeInsets.symmetric(vertical: 9, horizontal: 6),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
+            padding: const EdgeInsets.all(7),
             decoration: BoxDecoration(
               color: color.withValues(alpha: 0.15),
               borderRadius: AppRadius.roundedSm,
             ),
-            child: Icon(icon, color: color, size: 20),
+            child: Icon(icon, color: color, size: 18),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 5),
           Text(
             label,
             style: AppTextStyles.label.copyWith(

@@ -52,6 +52,7 @@ class CreateMatchDraft {
     openingStrikerId = null;
     openingNonStrikerId = null;
     openingBowlerId = null;
+    maxOversPerBowler = null;
   }
 }
 
@@ -201,6 +202,7 @@ class MatchProvider extends ChangeNotifier {
       tossDecision: _draft.tossDecision,
       status: 'live',
       currentInningsNumber: 1,
+      maxOversPerBowler: _draft.maxOversPerBowler,
       createdAt: now,
     );
 

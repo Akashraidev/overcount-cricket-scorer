@@ -34,7 +34,7 @@ class LiveBattersCard extends StatelessWidget {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return AppCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         children: [
           // Header
@@ -46,6 +46,7 @@ class LiveBattersCard extends StatelessWidget {
                 style: AppTextStyles.label.copyWith(
                   color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                   letterSpacing: 1.0,
+                  fontSize: 10.5,
                 ),
               ),
               InkWell(
@@ -55,13 +56,14 @@ class LiveBattersCard extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                   child: Row(
                     children: [
-                      const Icon(Icons.swap_vert, size: 16, color: AppColors.primary),
-                      const SizedBox(width: 4),
+                      const Icon(Icons.swap_vert, size: 15, color: AppColors.primary),
+                      const SizedBox(width: 3),
                       Text(
                         'Swap Strike',
                         style: AppTextStyles.label.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -70,7 +72,7 @@ class LiveBattersCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           // Striker Row (On Strike)
           if (striker != null)
@@ -95,7 +97,7 @@ class LiveBattersCard extends StatelessWidget {
               onTap: onChangeStriker,
             ),
 
-          const SizedBox(height: 8),
+          const SizedBox(height: 5),
 
           // Non-Striker Row
           if (nonStriker != null)
@@ -121,18 +123,18 @@ class LiveBattersCard extends StatelessWidget {
             ),
 
           if (partnership != null) ...[
-            const Divider(height: 16),
+            const Divider(height: 10),
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(Icons.handshake_outlined, size: 14, color: AppColors.accent),
-                const SizedBox(width: 6),
+                const Icon(Icons.handshake_outlined, size: 13, color: AppColors.accent),
+                const SizedBox(width: 5),
                 Text(
                   'Partnership: ${partnership!.totalRuns} (${partnership!.totalBalls})',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                     fontWeight: FontWeight.w600,
-                    fontSize: 11,
+                    fontSize: 10.5,
                   ),
                 ),
               ],
@@ -154,7 +156,7 @@ class LiveBattersCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: AppRadius.roundedSm,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         decoration: BoxDecoration(
           color: isOnStrike
               ? AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08)
@@ -170,7 +172,7 @@ class LiveBattersCard extends StatelessWidget {
           children: [
             Icon(
               isOnStrike ? Icons.sports_cricket : Icons.person_add_outlined,
-              size: 18,
+              size: 16,
               color: isOnStrike ? AppColors.primary : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
             ),
             const SizedBox(width: 8),
@@ -179,6 +181,7 @@ class LiveBattersCard extends StatelessWidget {
                 label,
                 style: AppTextStyles.bodyMedium.copyWith(
                   fontWeight: FontWeight.w600,
+                  fontSize: 13,
                   color: isOnStrike
                       ? AppColors.primary
                       : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
@@ -189,7 +192,7 @@ class LiveBattersCard extends StatelessWidget {
             ),
             const Icon(
               Icons.add_circle_outline,
-              size: 18,
+              size: 16,
               color: AppColors.primary,
             ),
           ],
@@ -214,7 +217,7 @@ class LiveBattersCard extends StatelessWidget {
       onTap: onTap,
       borderRadius: AppRadius.roundedSm,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5.5),
         decoration: BoxDecoration(
           color: isOnStrike
               ? AppColors.primary.withValues(alpha: isDark ? 0.12 : 0.08)

@@ -16,6 +16,7 @@ class CricketMatch {
   final String? resultSummary;
   final String? winnerTeamId;
   final int currentInningsNumber;
+  final int? maxOversPerBowler; // null = auto calculate, 0 = Unlimited, > 0 = custom limit
   final int createdAt;
 
   const CricketMatch({
@@ -36,6 +37,7 @@ class CricketMatch {
     this.resultSummary,
     this.winnerTeamId,
     this.currentInningsNumber = 1,
+    this.maxOversPerBowler,
     required this.createdAt,
   });
 
@@ -58,6 +60,7 @@ class CricketMatch {
       'resultSummary': resultSummary,
       'winnerTeamId': winnerTeamId,
       'currentInningsNumber': currentInningsNumber,
+      'maxOversPerBowler': maxOversPerBowler,
       'createdAt': createdAt,
     };
   }
@@ -81,9 +84,12 @@ class CricketMatch {
       resultSummary: map['resultSummary'] as String?,
       winnerTeamId: map['winnerTeamId'] as String?,
       currentInningsNumber: map['currentInningsNumber'] != null ? (map['currentInningsNumber'] as int) : 1,
+      maxOversPerBowler: map['maxOversPerBowler'] as int?,
       createdAt: map['createdAt'] != null ? (map['createdAt'] as int) : 0,
     );
   }
+
+  static const Object _sentinel = Object();
 
   CricketMatch copyWith({
     String? id,
@@ -103,6 +109,7 @@ class CricketMatch {
     String? resultSummary,
     String? winnerTeamId,
     int? currentInningsNumber,
+    Object? maxOversPerBowler = _sentinel,
     int? createdAt,
   }) {
     return CricketMatch(
@@ -123,6 +130,7 @@ class CricketMatch {
       resultSummary: resultSummary ?? this.resultSummary,
       winnerTeamId: winnerTeamId ?? this.winnerTeamId,
       currentInningsNumber: currentInningsNumber ?? this.currentInningsNumber,
+      maxOversPerBowler: maxOversPerBowler == _sentinel ? this.maxOversPerBowler : (maxOversPerBowler as int?),
       createdAt: createdAt ?? this.createdAt,
     );
   }

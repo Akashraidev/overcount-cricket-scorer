@@ -15,6 +15,7 @@ import '../matches/match_provider.dart';
 import '../scorecard/match_detail_screen.dart';
 import 'local_scoring_provider.dart';
 import 'scoring_provider.dart';
+import 'widgets/boundary_celebration_overlay.dart';
 import 'widgets/cancel_match_dialog.dart';
 import 'widgets/current_over_track.dart';
 import 'widgets/end_over_dialog.dart';
@@ -414,11 +415,83 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
     );
   }
 
+  PopupMenuItem<String> _buildActionMenuItem({
+    required String value,
+    required IconData icon,
+    required Color color,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+    bool isDestructive = false,
+    required bool isDark,
+  }) {
+    return PopupMenuItem<String>(
+      value: value,
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+      height: subtitle != null ? 50 : 44,
+      child: Row(
+        children: [
+          Container(
+            width: 32,
+            height: 32,
+            decoration: BoxDecoration(
+              color: color.withValues(alpha: isDark ? 0.22 : 0.12),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(
+                color: color.withValues(alpha: isDark ? 0.35 : 0.2),
+                width: 1,
+              ),
+            ),
+            child: Icon(icon, size: 17, color: color),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.bodyMedium.copyWith(
+                    fontWeight: isDestructive ? FontWeight.w700 : FontWeight.w600,
+                    fontSize: 13,
+                    color: isDestructive
+                        ? AppColors.error
+                        : (isDark ? Colors.white : AppColors.lightTextPrimary),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null) ...[
+                  const SizedBox(height: 1.5),
+                  Text(
+                    subtitle,
+                    style: AppTextStyles.bodySmall.copyWith(
+                      fontSize: 10.5,
+                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ],
+              ],
+            ),
+          ),
+          if (trailing != null) ...[
+            const SizedBox(width: 8),
+            trailing,
+          ],
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final scoringProv = context.watch<ScoringProvider>();
     final localProv = context.watch<LocalScoringProvider>();
     final isDesktop = ResponsiveBreakpoints.isDesktop(context);
+    final isDark = Theme.of(context).brightness == Brightness.dark;
 
     if (scoringProv.isLoading ||
         scoringProv.match == null ||
@@ -478,7 +551,35 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
               ),
               PopupMenuButton<String>(
                 tooltip: 'Scoring Actions',
-                icon: const Icon(Icons.more_vert),
+                icon: Container(
+                  width: 36,
+                  height: 36,
+                  decoration: BoxDecoration(
+                    color: isDark ? Colors.white.withValues(alpha: 0.08) : Colors.black.withValues(alpha: 0.05),
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                      width: 0.8,
+                    ),
+                  ),
+                  child: const Icon(Icons.more_vert_rounded, size: 20),
+                ),
+                color: isDark ? const Color(0xFF1E2430) : Colors.white,
+                surfaceTintColor: Colors.transparent,
+                elevation: 8,
+                shadowColor: Colors.black.withValues(alpha: isDark ? 0.45 : 0.2),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  side: BorderSide(
+                    color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                    width: 1,
+                  ),
+                ),
+                offset: const Offset(0, 48),
+                constraints: const BoxConstraints(
+                  minWidth: 260,
+                  maxWidth: 320,
+                ),
                 onSelected: (val) {
                   if (val == 'live_share') {
                     LiveSharingSheet.show(context);
@@ -488,8 +589,6 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                     _confirmDeclare(context, scoringProv);
                   } else if (val == 'cancel_match') {
                     _promptCancelMatch(context, scoringProv);
-                  } else if (val == 'retire') {
-                    _showRetireSheet(context, scoringProv);
                   } else if (val == 'add_bat') {
                     _promptQuickAddPlayer(context, scoringProv, isBatting: true);
                   } else if (val == 'add_bowl') {
@@ -497,83 +596,115 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                   }
                 },
                 itemBuilder: (context) => [
-                  const PopupMenuItem(
+                  _buildActionMenuItem(
                     value: 'live_share',
-                    child: Row(
-                      children: [
-                        Icon(Icons.wifi_tethering_rounded, size: 18, color: AppColors.primary),
-                        SizedBox(width: 8),
-                        Text('Live Wi-Fi Sharing'),
-                      ],
-                    ),
+                    icon: Icons.wifi_tethering_rounded,
+                    color: AppColors.primary,
+                    title: 'Live Wi-Fi Sharing',
+                    subtitle: 'Broadcast live score nearby',
+                    isDark: isDark,
+                    trailing: localProv.isHosting
+                        ? Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: AppColors.success.withValues(alpha: 0.16),
+                              borderRadius: BorderRadius.circular(6),
+                              border: Border.all(
+                                color: AppColors.success.withValues(alpha: 0.4),
+                                width: 0.8,
+                              ),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                Container(
+                                  width: 5,
+                                  height: 5,
+                                  decoration: const BoxDecoration(
+                                    color: AppColors.success,
+                                    shape: BoxShape.circle,
+                                  ),
+                                ),
+                                const SizedBox(width: 4),
+                                const Text(
+                                  'LIVE',
+                                  style: TextStyle(
+                                    fontSize: 9.5,
+                                    fontWeight: FontWeight.w800,
+                                    color: AppColors.success,
+                                    letterSpacing: 0.5,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          )
+                        : null,
                   ),
-                  PopupMenuItem(
+                  _buildActionMenuItem(
                     value: 'bowler_limit',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.tune, size: 18, color: AppColors.primary),
-                        const SizedBox(width: 8),
-                        Text('Bowler Limit (${scoringProv.isUnlimitedBowlerOvers ? 'No Limit' : '${scoringProv.maxOversPerBowler} ov'})'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'retire',
-                    child: Row(
-                      children: [
-                        Icon(Icons.accessible_forward, size: 18, color: AppColors.warning),
-                        SizedBox(width: 8),
-                        Text('Retire Batsman (Hurt/Out)'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'add_bat',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_add, size: 18, color: AppColors.primary),
-                        SizedBox(width: 8),
-                        Text('Add Player to Batting Team'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'add_bowl',
-                    child: Row(
-                      children: [
-                        Icon(Icons.person_add_alt_1, size: 18, color: AppColors.info),
-                        SizedBox(width: 8),
-                        Text('Add Player to Bowling Team'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    value: 'declare',
-                    child: Row(
-                      children: [
-                        const Icon(Icons.flag_outlined, size: 18, color: AppColors.warning),
-                        const SizedBox(width: 8),
-                        Text(scoringProv.currentInnings?.inningsNumber == 1 ? 'End 1st Innings Early' : 'End Match Early'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: 'cancel_match',
-                    child: Row(
-                      children: [
-                        Icon(Icons.cancel_outlined, size: 18, color: AppColors.error),
-                        SizedBox(width: 8),
-                        Text(
-                          'Cancel Match',
-                          style: TextStyle(
-                            color: AppColors.error,
-                            fontWeight: FontWeight.w600,
-                          ),
+                    icon: Icons.tune_rounded,
+                    color: const Color(0xFF8B5CF6),
+                    title: 'Bowler Over Limit',
+                    subtitle: 'Adjust max quota per bowler',
+                    isDark: isDark,
+                    trailing: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2.5),
+                      decoration: BoxDecoration(
+                        color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.06),
+                        borderRadius: BorderRadius.circular(6),
+                        border: Border.all(
+                          color: (isDark ? Colors.white : Colors.black).withValues(alpha: 0.12),
+                          width: 0.8,
                         ),
-                      ],
+                      ),
+                      child: Text(
+                        scoringProv.isUnlimitedBowlerOvers
+                            ? 'No Limit'
+                            : '${scoringProv.maxOversPerBowler} ov',
+                        style: TextStyle(
+                          fontSize: 10.5,
+                          fontWeight: FontWeight.w700,
+                          color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        ),
+                      ),
                     ),
+                  ),
+                  _buildActionMenuItem(
+                    value: 'add_bat',
+                    icon: Icons.person_add_alt_1_rounded,
+                    color: const Color(0xFF10B981),
+                    title: 'Add Player to Batting Team',
+                    subtitle: 'Add to ${battingTeam.shortName} squad',
+                    isDark: isDark,
+                  ),
+                  _buildActionMenuItem(
+                    value: 'add_bowl',
+                    icon: Icons.group_add_rounded,
+                    color: const Color(0xFF0EA5E9),
+                    title: 'Add Player to Bowling Team',
+                    subtitle: 'Add to ${bowlingTeam.shortName} squad',
+                    isDark: isDark,
+                  ),
+                  const PopupMenuDivider(height: 12),
+                  _buildActionMenuItem(
+                    value: 'declare',
+                    icon: Icons.flag_rounded,
+                    color: AppColors.warning,
+                    title: scoringProv.currentInnings?.inningsNumber == 1
+                        ? 'End 1st Innings Early'
+                        : 'End Match Early',
+                    subtitle: 'Declare or conclude current innings',
+                    isDark: isDark,
+                  ),
+                  const PopupMenuDivider(height: 12),
+                  _buildActionMenuItem(
+                    value: 'cancel_match',
+                    icon: Icons.cancel_rounded,
+                    color: AppColors.error,
+                    title: 'Cancel Match',
+                    subtitle: 'Rain, weather or technical stop',
+                    isDestructive: true,
+                    isDark: isDark,
                   ),
                 ],
               ),
@@ -592,9 +723,24 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
             ],
           ],
         ),
-        body: isDesktop
-            ? _buildDesktopLayout(context, scoringProv, match, innings, battingTeam, bowlingTeam)
-            : _buildMobileLayout(context, scoringProv, match, innings, battingTeam, bowlingTeam),
+        body: Container(
+          decoration: BoxDecoration(
+            gradient: isDark ? AppColors.darkScreenGradient : AppColors.lightScreenGradient,
+          ),
+          child: Stack(
+            children: [
+              isDesktop
+                  ? _buildDesktopLayout(context, scoringProv, match, innings, battingTeam, bowlingTeam)
+                  : _buildMobileLayout(context, scoringProv, match, innings, battingTeam, bowlingTeam),
+              Positioned.fill(
+                child: BoundaryCelebrationOverlay(
+                  celebration: scoringProv.boundaryCelebration,
+                  onDismiss: () => scoringProv.clearBoundaryCelebration(),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -619,7 +765,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
             battingTeam: battingTeam,
             bowlingTeam: bowlingTeam,
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // 2. Batters Card
           LiveBattersCard(
@@ -632,7 +778,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
             onChangeStriker: () => _showBatterPicker(context, prov, isStriker: true),
             onChangeNonStriker: () => _showBatterPicker(context, prov, isStriker: false),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // 3. Current Bowler Card
           LiveBowlerCard(
@@ -640,14 +786,14 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
             bowlerStat: prov.currentBowlerStat,
             onChangeBowler: () => _showBowlerPicker(context, prov),
           ),
-          const SizedBox(height: 12),
+          const SizedBox(height: 8),
 
           // 4. Current Over Balls Stream
           CurrentOverTrack(
             balls: prov.currentOverBalls,
             overNumber: innings.totalLegalBalls ~/ (match.ballsPerOver),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 10),
 
           // If 1st innings complete, show Innings Break Banner instead of Keypad!
           if (prov.isInningsComplete && !prov.isMatchComplete && innings.inningsNumber == 1) ...[
@@ -740,7 +886,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                     onChangeStriker: () => _showBatterPicker(context, prov, isStriker: true),
                     onChangeNonStriker: () => _showBatterPicker(context, prov, isStriker: false),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   LiveBowlerCard(
                     bowler: prov.currentBowler,
                     bowlerStat: prov.currentBowlerStat,
@@ -750,7 +896,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 14),
 
           // Center Column: Live Score & Scoring Keypad
           Expanded(
@@ -764,12 +910,12 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
                     battingTeam: battingTeam,
                     bowlingTeam: bowlingTeam,
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 10),
                   CurrentOverTrack(
                     balls: prov.currentOverBalls,
                     overNumber: innings.totalLegalBalls ~/ (match.ballsPerOver),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 12),
 
                   // If 1st innings complete, show Innings Break Banner instead of Keypad!
                   if (prov.isInningsComplete && !prov.isMatchComplete && innings.inningsNumber == 1) ...[
@@ -1292,6 +1438,7 @@ class _LiveScoringScreenState extends State<LiveScoringScreen> {
     );
   }
 
+  // ignore: unused_element
   void _showRetireSheet(BuildContext context, ScoringProvider prov) {
     if (prov.striker == null || prov.nonStriker == null) return;
 

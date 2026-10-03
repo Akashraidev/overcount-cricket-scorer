@@ -33,7 +33,7 @@ class _AddEditTournamentDialogState extends State<AddEditTournamentDialog> {
   DateTime? _endDate;
   final Set<String> _selectedTeamIds = {};
 
-  final List<String> _formats = const ['T20', 'T10', 'ODI', 'Test', 'Custom'];
+  final List<String> _formats = const ['T10', 'T12', 'T20', 'ODI', 'Test', 'Custom'];
 
   @override
   void initState() {
@@ -156,7 +156,7 @@ class _AddEditTournamentDialogState extends State<AddEditTournamentDialog> {
                 endDate: _endDate?.millisecondsSinceEpoch,
               );
               await tourneyProv.updateTournament(updated);
-              if (mounted) Navigator.of(context).pop(updated);
+              if (context.mounted) Navigator.of(context).pop(updated);
             } else {
               final created = await tourneyProv.createTournament(
                 name: _nameController.text.trim(),
@@ -165,7 +165,7 @@ class _AddEditTournamentDialogState extends State<AddEditTournamentDialog> {
                 endDate: _endDate,
                 teamIds: _selectedTeamIds.toList(),
               );
-              if (mounted) Navigator.of(context).pop(created);
+              if (context.mounted) Navigator.of(context).pop(created);
             }
           },
         ),

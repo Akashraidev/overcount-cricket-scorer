@@ -1,7 +1,6 @@
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
-import '../../data/models/ball.dart';
 import '../../data/models/batting_stat.dart';
 import '../../data/models/bowling_stat.dart';
 import '../../data/models/fall_of_wicket.dart';
@@ -167,17 +166,6 @@ class PdfScorecardGenerator {
     );
   }
 
-  static pw.Widget _sequenceIcon({PdfColor color = _navySlate}) {
-    final hex = _toHex(color);
-    return _svgIcon(
-      '<svg viewBox="0 0 24 24" width="11" height="11">'
-      '<circle fill="$hex" cx="12" cy="12" r="9"/>'
-      '</svg>',
-      width: 11,
-      height: 11,
-    );
-  }
-
   // ---------------------------------------------------------------------------
   // Build Full Scorecard PDF Document
   // ---------------------------------------------------------------------------
@@ -216,8 +204,8 @@ class PdfScorecardGenerator {
           _buildResultBanner(match, teamA, teamB, teamAColor, teamBColor),
           pw.SizedBox(height: 10),
 
-          // 3. Teams Overview with Team Color Themes
-          _buildTeamsCard(match, teamA, teamB, teamAColor, teamBColor),
+          // 3. Teams Overview with Team Color Themes & Key Scores
+          _buildTeamsCard(match, teamA, teamB, teamAColor, teamBColor, allInnings),
           pw.SizedBox(height: 14),
 
           // 4. Per-Innings Sections (Themed with Batting & Bowling Teams' Colors)
@@ -568,55 +556,81 @@ class PdfScorecardGenerator {
   }
 
   // ---------------------------------------------------------------------------
-  // 3. Teams Overview Card (Each styled with its own Team Color)
+  // 3. Teams Overview Card (Each styled with its own Team Color & Scores)
   // ---------------------------------------------------------------------------
   static pw.Widget _buildTeamsCard(
     CricketMatch match,
     Team teamA,
     Team teamB,
     PdfColor teamAColor,
-    PdfColor teamBColor,
-  ) {
+    PdfColor teamBColor, [
+    List<Innings> allInnings = const [],
+  ]) {
+    final teamAInnings = allInnings.where((i) => i.battingTeamId == teamA.id).toList();
+    final teamBInnings = allInnings.where((i) => i.battingTeamId == teamB.id).toList();
+
     return pw.Row(
       children: [
-        pw.Expanded(child: _buildSingleTeamBox(teamA, teamColor: teamAColor)),
-        pw.SizedBox(width: 10),
+        pw.Expanded(
+          child: _buildSingleTeamBox(
+            teamA,
+            teamColor: teamAColor,
+            inningsList: teamAInnings,
+            isWinner: match.winnerTeamId == teamA.id,
+          ),
+        ),
+        pw.SizedBox(width: 8),
         pw.Container(
-          padding: const pw.EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+          padding: const pw.EdgeInsets.symmetric(horizontal: 6, vertical: 3),
           decoration: pw.BoxDecoration(
             color: _tableHeaderBg,
             borderRadius: pw.BorderRadius.circular(4),
             border: pw.Border.all(color: _borderColor, width: 0.5),
           ),
-          child: pw.Text('VS', style: pw.TextStyle(fontSize: 8.5, fontWeight: pw.FontWeight.bold, color: _textMuted)),
+          child: pw.Text('VS', style: pw.TextStyle(fontSize: 8, fontWeight: pw.FontWeight.bold, color: _textMuted)),
         ),
-        pw.SizedBox(width: 10),
-        pw.Expanded(child: _buildSingleTeamBox(teamB, teamColor: teamBColor)),
+        pw.SizedBox(width: 8),
+        pw.Expanded(
+          child: _buildSingleTeamBox(
+            teamB,
+            teamColor: teamBColor,
+            inningsList: teamBInnings,
+            isWinner: match.winnerTeamId == teamB.id,
+          ),
+        ),
       ],
     );
   }
 
-  static pw.Widget _buildSingleTeamBox(Team team, {required PdfColor teamColor}) {
+  static pw.Widget _buildSingleTeamBox(
+    Team team, {
+    required PdfColor teamColor,
+    List<Innings> inningsList = const [],
+    bool isWinner = false,
+  }) {
     final bgTint = _tintColor(teamColor, 0.06);
 
     return pw.Container(
-      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      padding: const pw.EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: pw.BoxDecoration(
         color: bgTint,
         borderRadius: pw.BorderRadius.circular(6),
-        border: pw.Border.all(color: _tintColor(teamColor, 0.25), width: 0.8),
+        border: pw.Border.all(
+          color: isWinner ? teamColor : _tintColor(teamColor, 0.25),
+          width: isWinner ? 1.2 : 0.8,
+        ),
       ),
       child: pw.Row(
         children: [
           pw.Container(
             width: 3.5,
-            height: 24,
+            height: 28,
             decoration: pw.BoxDecoration(
               color: teamColor,
               borderRadius: pw.BorderRadius.circular(1.5),
             ),
           ),
-          pw.SizedBox(width: 7),
+          pw.SizedBox(width: 6),
           pw.Container(
             width: 22,
             height: 22,
@@ -630,15 +644,36 @@ class PdfScorecardGenerator {
               style: pw.TextStyle(color: PdfColors.white, fontSize: 9, fontWeight: pw.FontWeight.bold),
             ),
           ),
-          pw.SizedBox(width: 8),
+          pw.SizedBox(width: 6),
           pw.Expanded(
             child: pw.Column(
               crossAxisAlignment: pw.CrossAxisAlignment.start,
+              mainAxisSize: pw.MainAxisSize.min,
               children: [
-                pw.Text(
-                  team.name,
-                  style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _navyDark),
-                  maxLines: 1,
+                pw.Row(
+                  children: [
+                    pw.Expanded(
+                      child: pw.Text(
+                        team.name,
+                        style: pw.TextStyle(fontSize: 9.5, fontWeight: pw.FontWeight.bold, color: _navyDark),
+                        maxLines: 1,
+                      ),
+                    ),
+                    if (isWinner) ...[
+                      pw.SizedBox(width: 4),
+                      pw.Container(
+                        padding: const pw.EdgeInsets.symmetric(horizontal: 4, vertical: 1),
+                        decoration: pw.BoxDecoration(
+                          color: _gold,
+                          borderRadius: pw.BorderRadius.circular(3),
+                        ),
+                        child: pw.Text(
+                          'WINNER',
+                          style: pw.TextStyle(fontSize: 6.5, fontWeight: pw.FontWeight.bold, color: PdfColors.white),
+                        ),
+                      ),
+                    ],
+                  ],
                 ),
                 if (team.shortName.isNotEmpty)
                   pw.Text(
@@ -648,6 +683,33 @@ class PdfScorecardGenerator {
               ],
             ),
           ),
+          pw.SizedBox(width: 6),
+          if (inningsList.isNotEmpty)
+            pw.Column(
+              crossAxisAlignment: pw.CrossAxisAlignment.end,
+              mainAxisSize: pw.MainAxisSize.min,
+              children: [
+                for (final inn in inningsList) ...[
+                  pw.Text(
+                    '${inn.totalRuns}/${inn.totalWickets}',
+                    style: pw.TextStyle(
+                      fontSize: 11,
+                      fontWeight: pw.FontWeight.bold,
+                      color: _navyDark,
+                    ),
+                  ),
+                  pw.Text(
+                    '${inn.oversDisplay} Ov | CRR ${inn.currentRunRate.toStringAsFixed(1)}',
+                    style: const pw.TextStyle(fontSize: 7, color: _textMuted),
+                  ),
+                ],
+              ],
+            )
+          else
+            pw.Text(
+              'Yet to bat',
+              style: pw.TextStyle(fontSize: 8, color: _textMuted),
+            ),
         ],
       ),
     );
@@ -966,92 +1028,12 @@ class PdfScorecardGenerator {
                     ],
                   ],
                 ),
-
-                // 4E. OVER-BY-OVER SUMMARY
-                if (overSummaries.isNotEmpty) ...[
-                  pw.SizedBox(height: 10),
-                  _buildSectionTitle(
-                    'OVER-BY-OVER DETAILS',
-                    icon: _sequenceIcon(color: bowlingTeamColor),
-                    accentColor: bowlingTeamColor,
-                  ),
-                  pw.SizedBox(height: 4),
-                  _buildOverSummariesTable(overSummaries, headBg: _tintColor(bowlingTeamColor, 0.10)),
-                ],
               ],
             ),
           ),
         ],
       ),
     );
-  }
-
-  // ---------------------------------------------------------------------------
-  // Over Summaries Table Helper
-  // ---------------------------------------------------------------------------
-  static pw.Widget _buildOverSummariesTable(List<OverSummary> overSummaries, {required PdfColor headBg}) {
-    int runningScore = 0;
-    int runningWickets = 0;
-
-    return pw.Table(
-      border: pw.TableBorder.all(color: _borderColor, width: 0.5),
-      children: [
-        // Header
-        pw.TableRow(
-          decoration: pw.BoxDecoration(color: headBg),
-          children: [
-            _tableHeaderCell('Over', flex: 1),
-            _tableHeaderCell('Bowler', flex: 3),
-            _tableHeaderCell('Ball Sequence', flex: 4),
-            _tableHeaderCell('Runs', align: pw.TextAlign.right, flex: 1),
-            _tableHeaderCell('Wkts', align: pw.TextAlign.right, flex: 1),
-            _tableHeaderCell('Score', align: pw.TextAlign.right, flex: 2),
-          ],
-        ),
-        // Rows
-        for (int i = 0; i < overSummaries.length; i++) ...[
-          () {
-            final over = overSummaries[i];
-            runningScore += over.runs;
-            runningWickets += over.wickets;
-            final ballTokens = over.balls.map(_formatBallToken).join('  ');
-
-            return pw.TableRow(
-              decoration: pw.BoxDecoration(
-                color: i % 2 == 1 ? _tableAltBg : PdfColors.white,
-              ),
-              children: [
-                _tableBodyCell('Ov ${over.overNumber + 1}', flex: 1, isBold: true),
-                _tableBodyCell(over.bowlerName, flex: 3),
-                _tableBodyCell(ballTokens, flex: 4),
-                _tableBodyCell('${over.runs}', align: pw.TextAlign.right, flex: 1),
-                _tableBodyCell(
-                  over.wickets > 0 ? '${over.wickets}' : '-',
-                  align: pw.TextAlign.right,
-                  textColor: over.wickets > 0 ? _crimson : null,
-                  isBold: over.wickets > 0,
-                  flex: 1,
-                ),
-                _tableBodyCell('$runningScore/$runningWickets', align: pw.TextAlign.right, isBold: true, flex: 2),
-              ],
-            );
-          }(),
-        ],
-      ],
-    );
-  }
-
-  /// Format ball-by-ball tokens with pure ASCII characters
-  /// that print 100% reliably on all PDF printers (no unprintable emojis or bullets)
-  static String _formatBallToken(Ball b) {
-    if (b.isWicket) return 'W';
-    if (b.extraType == 'wide') return b.extras > 1 ? '${b.extras}wd' : 'wd';
-    if (b.extraType == 'noball') return b.extras > 1 ? '${b.extras}nb' : 'nb';
-    if (b.extraType == 'bye') return '${b.extras}b';
-    if (b.extraType == 'legbye') return '${b.extras}lb';
-    if (b.extraType == 'penalty') return '${b.extras}p';
-    if (b.runsBat == 0) return '.';
-    return '${b.runsBat}';
   }
 
   // ---------------------------------------------------------------------------

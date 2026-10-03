@@ -23,23 +23,23 @@ class AppColors {
   static const Color chartInnings1 = Color(0xFF2563EB); // Royal Blue for 1st Innings
   static const Color chartInnings2 = Color(0xFFDC2626); // Vivid Crimson Red for 2nd Innings
 
-  // Dark Theme Palette - Obsidian Pitch Black & Crimson
-  static const Color darkBackground = Color(0xFF0A0A0A); // Pure Deep Pitch Black
-  static const Color darkSurface = Color(0xFF141414); // Sleek Obsidian Surface
-  static const Color darkSurfaceElevated = Color(0xFF1F1F1F); // Elevated Charcoal Card
-  static const Color darkBorder = Color(0xFF2E2E2E); // Subtle Charcoal Border
-  static const Color darkTextPrimary = Color(0xFFFFFFFF); // Pure White
-  static const Color darkTextSecondary = Color(0xFFA3A3A3); // Cool Neutral Gray
-  static const Color darkTextMuted = Color(0xFF737373); // Muted Gray
+  // Dark Theme Palette - Deep Obsidian Slate & Racing Crimson
+  static const Color darkBackground = Color(0xFF0C0F17); // Deep Pitch Slate
+  static const Color darkSurface = Color(0xFF141924); // Sleek Obsidian Surface
+  static const Color darkSurfaceElevated = Color(0xFF1D2333); // Elevated Card Surface
+  static const Color darkBorder = Color(0xFF273145); // Refined Subtle Border
+  static const Color darkTextPrimary = Color(0xFFF8FAFC); // Crisp High-Contrast White
+  static const Color darkTextSecondary = Color(0xFF94A3B8); // Cool Slate Neutral Gray
+  static const Color darkTextMuted = Color(0xFF64748B); // Muted Gray
 
-  // Light Theme Palette - Ultra Clean White & Jet Black
-  static const Color lightBackground = Color(0xFFF5F5F7); // Clean Off-White
+  // Light Theme Palette - Ultra Clean Athletic White & Slate
+  static const Color lightBackground = Color(0xFFF6F8FA); // Crisp Sport Off-White
   static const Color lightSurface = Color(0xFFFFFFFF); // Pure White Surface
-  static const Color lightSurfaceElevated = Color(0xFFF0F0F2); // Soft Light Gray
-  static const Color lightBorder = Color(0xFFE4E4E7); // Subtle Border
-  static const Color lightTextPrimary = Color(0xFF0A0A0A); // Jet Black
-  static const Color lightTextSecondary = Color(0xFF52525B); // Graphite Gray
-  static const Color lightTextMuted = Color(0xFF71717A); // Slate Gray
+  static const Color lightSurfaceElevated = Color(0xFFEDF2F7); // Soft Elevated Surface
+  static const Color lightBorder = Color(0xFFE2E8F0); // Crisp Neutral Border
+  static const Color lightTextPrimary = Color(0xFF0F172A); // Deep Slate
+  static const Color lightTextSecondary = Color(0xFF475569); // Slate Gray
+  static const Color lightTextMuted = Color(0xFF64748B); // Muted Slate Gray
 
   // Live Indicator & Alerts
   static const Color liveRed = Color(0xFFDC2626);
@@ -57,14 +57,26 @@ class AppColors {
   );
 
   static const LinearGradient liveHeaderGradient = LinearGradient(
-    colors: [Color(0xFF171717), Color(0xFF0A0A0A)],
+    colors: [Color(0xFF1A1F2D), Color(0xFF111522)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient heroCardGradient = LinearGradient(
+    colors: [Color(0xFF1E2434), Color(0xFF131724)],
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+  );
+
+  static const LinearGradient darkScreenGradient = LinearGradient(
+    colors: [Color(0xFF0F131E), Color(0xFF0A0D15)],
     begin: Alignment.topCenter,
     end: Alignment.bottomCenter,
   );
 
-  static const LinearGradient heroCardGradient = LinearGradient(
-    colors: [Color(0xFF1E1E1E), Color(0xFF0A0A0A)],
-    begin: Alignment.topLeft,
-    end: Alignment.bottomRight,
+  static const LinearGradient lightScreenGradient = LinearGradient(
+    colors: [Color(0xFFFFFFFF), Color(0xFFF4F6F9)],
+    begin: Alignment.topCenter,
+    end: Alignment.bottomCenter,
   );
 }

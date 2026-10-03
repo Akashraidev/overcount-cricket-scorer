@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../../../core/constants/app_colors.dart';
 import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
@@ -71,12 +72,12 @@ class LiveSharingSheet extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Wi-Fi Live Sharing',
+                      'Live Match Sharing',
                       style: AppTextStyles.h3.copyWith(fontSize: 18),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Live scoring over same Wi-Fi (No internet needed)',
+                      'Hotspot or Local Wi-Fi (No internet needed)',
                       style: AppTextStyles.bodySmall.copyWith(
                         color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                       ),
@@ -98,30 +99,94 @@ class LiveSharingSheet extends StatelessWidget {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  const Icon(Icons.sensors_rounded, size: 48, color: AppColors.primary),
-                  const SizedBox(height: 12),
+                  const Icon(Icons.wifi_tethering_rounded, size: 44, color: AppColors.primary),
+                  const SizedBox(height: 10),
                   const Text(
-                    'Host Live Match on Local Wi-Fi',
+                    'Host Live Match Offline',
                     style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
                   ),
                   const SizedBox(height: 6),
                   Text(
-                    'Start hosting to generate a simple 6-digit code. Spectators on the same Wi-Fi can enter the code to view this live scorecard in real-time.',
+                    'Broadcast live ball-by-ball scorecards to nearby phones without internet or cloud servers.',
                     textAlign: TextAlign.center,
                     style: AppTextStyles.bodySmall.copyWith(
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                     ),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 14),
+
+                  // 2 easy options highlight
+                  Container(
+                    padding: const EdgeInsets.all(12),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.04) : Colors.black.withValues(alpha: 0.03),
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(
+                        color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
+                        width: 0.8,
+                      ),
+                    ),
+                    child: Column(
+                      children: [
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.wifi_tethering_rounded, size: 18, color: AppColors.primary),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    fontSize: 11.5,
+                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                  ),
+                                  children: const [
+                                    TextSpan(text: 'Personal Hotspot (Recommended): ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    TextSpan(text: 'Turn on your phone\'s hotspot. Spectators connect to your hotspot and scan your QR code or enter your code.'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 8),
+                          child: Divider(height: 1),
+                        ),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Icon(Icons.wifi_rounded, size: 18, color: AppColors.info),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: RichText(
+                                text: TextSpan(
+                                  style: AppTextStyles.bodySmall.copyWith(
+                                    fontSize: 11.5,
+                                    color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                                  ),
+                                  children: const [
+                                    TextSpan(text: 'Local Wi-Fi Network: ', style: TextStyle(fontWeight: FontWeight.bold)),
+                                    TextSpan(text: 'Ensure all devices are connected to the same Wi-Fi router.'),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
                   AppButton(
-                    label: 'Start Host & Generate Code',
+                    label: 'Start Live Host',
                     icon: Icons.play_arrow_rounded,
                     isFullWidth: true,
                     onPressed: () async {
                       final pin = await localProv.startHosting(scoringProv);
                       if (context.mounted && pin == null) {
                         ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Failed to start local server. Please ensure Wi-Fi is connected.')),
+                          const SnackBar(content: Text('Failed to start local host. Please ensure Hotspot or Wi-Fi is active.')),
                         );
                       }
                     },
@@ -164,13 +229,13 @@ class LiveSharingSheet extends StatelessWidget {
             ),
             const SizedBox(height: 16),
 
-            // 6-digit PIN Box
+            // QR Code & PIN Card
             AppCard(
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
                   Text(
-                    'VIEWER CONNECTION CODE',
+                    'SCAN QR OR ENTER CODE',
                     style: AppTextStyles.bodySmall.copyWith(
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
@@ -178,8 +243,38 @@ class LiveSharingSheet extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
+
+                  // QR Code
+                  if (localProv.qrPayload != null) ...[
+                    Container(
+                      padding: const EdgeInsets.all(10),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.withValues(alpha: 0.2)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.06),
+                            blurRadius: 10,
+                            offset: const Offset(0, 2),
+                          ),
+                        ],
+                      ),
+                      child: QrImageView(
+                        data: localProv.qrPayload!,
+                        version: QrVersions.auto,
+                        size: 140.0,
+                        eyeStyle: const QrEyeStyle(eyeShape: QrEyeShape.square, color: Color(0xFF0F172A)),
+                        dataModuleStyle: const QrDataModuleStyle(dataModuleShape: QrDataModuleShape.square, color: Color(0xFF0F172A)),
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                  ],
+
+                  // 6-digit PIN Box
                   _buildPinDisplay(localProv.pinCode ?? '------'),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 10),
+
                   Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
@@ -201,13 +296,30 @@ class LiveSharingSheet extends StatelessWidget {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 10),
+                  const SizedBox(height: 8),
+
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.black.withValues(alpha: 0.04),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Text(
+                      'Host IP: ${localProv.hostIp ?? "192.168.43.1"}:${localProv.actualPort}',
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 6),
                   Text(
-                    'Host IP: ${localProv.hostIp ?? "Local Wi-Fi"}:${localProv.actualPort}',
-                    style: TextStyle(
+                    'Spectators can scan the QR code or enter this 6-digit code on your Hotspot or Wi-Fi to watch live.',
+                    textAlign: TextAlign.center,
+                    style: AppTextStyles.bodySmall.copyWith(
                       fontSize: 11,
                       color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
-                      fontFamily: 'monospace',
                     ),
                   ),
                 ],

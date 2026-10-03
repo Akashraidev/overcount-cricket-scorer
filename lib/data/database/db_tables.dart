@@ -81,6 +81,7 @@ class DbTables {
       resultSummary TEXT,
       winnerTeamId TEXT,
       currentInningsNumber INTEGER NOT NULL DEFAULT 1,
+      maxOversPerBowler INTEGER,
       createdAt INTEGER NOT NULL,
       FOREIGN KEY (teamAId) REFERENCES $teams(id) ON DELETE CASCADE,
       FOREIGN KEY (teamBId) REFERENCES $teams(id) ON DELETE CASCADE

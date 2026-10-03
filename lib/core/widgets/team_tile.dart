@@ -28,17 +28,17 @@ class TeamTile extends StatelessWidget {
 
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.all(16),
-      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      margin: const EdgeInsets.only(bottom: 8),
       child: Row(
         children: [
           // Team Crest / Avatar
           Container(
-            width: 48,
-            height: 48,
+            width: 40,
+            height: 40,
             decoration: BoxDecoration(
               color: teamColor.withValues(alpha: 0.15),
-              borderRadius: AppRadius.roundedMd,
+              borderRadius: AppRadius.roundedSm,
               border: Border.all(color: teamColor, width: 1.5),
             ),
             alignment: Alignment.center,
@@ -46,12 +46,12 @@ class TeamTile extends StatelessWidget {
               team.shortName,
               style: AppTextStyles.scoreSmall.copyWith(
                 color: teamColor,
-                fontSize: 14,
+                fontSize: 13,
                 fontWeight: FontWeight.bold,
               ),
             ),
           ),
-          const SizedBox(width: 14),
+          const SizedBox(width: 12),
 
           // Team Info
           Expanded(
@@ -62,18 +62,19 @@ class TeamTile extends StatelessWidget {
                   team.name,
                   style: AppTextStyles.h3.copyWith(
                     color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
-                    fontSize: 16,
+                    fontSize: 15,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(height: 4),
+                const SizedBox(height: 2),
                 Text(
                   captainName != null
                       ? '$playerCount Players • Capt: $captainName'
                       : '$playerCount Players Registered',
                   style: AppTextStyles.bodySmall.copyWith(
                     color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                    fontSize: 11.5,
                   ),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
@@ -82,7 +83,7 @@ class TeamTile extends StatelessWidget {
             ),
           ),
 
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

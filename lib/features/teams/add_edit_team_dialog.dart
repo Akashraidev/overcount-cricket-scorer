@@ -149,14 +149,14 @@ class _AddEditTeamDialogState extends State<AddEditTeamDialog> {
                 colorValue: _selectedColor,
               );
               await teamProv.updateTeam(updated);
-              if (mounted) Navigator.of(context).pop(updated);
+              if (context.mounted) Navigator.of(context).pop(updated);
             } else {
               final created = await teamProv.createTeam(
                 name: _nameController.text.trim(),
                 shortName: _shortNameController.text.trim().toUpperCase(),
                 colorValue: _selectedColor,
               );
-              if (mounted) Navigator.of(context).pop(created);
+              if (context.mounted) Navigator.of(context).pop(created);
             }
           },
         ),

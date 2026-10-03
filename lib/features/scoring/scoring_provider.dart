@@ -18,6 +18,14 @@ import '../../data/repositories/player_repository.dart';
 import '../../data/repositories/scoring_repository.dart';
 import '../../data/repositories/team_repository.dart';
 
+enum BoundaryType { four, six }
+
+class BoundaryCelebration {
+  final BoundaryType type;
+  final int timestamp;
+  const BoundaryCelebration({required this.type, required this.timestamp});
+}
+
 class ScoringProvider extends ChangeNotifier {
   final ScoringRepository _scoringRepo = ScoringRepository();
   final MatchRepository _matchRepo = MatchRepository();
@@ -50,8 +58,17 @@ class ScoringProvider extends ChangeNotifier {
   bool _isInningsComplete = false;
   bool _isMatchComplete = false;
   String? _matchResultSummary;
+  BoundaryCelebration? _boundaryCelebration;
 
   // Getters
+  BoundaryCelebration? get boundaryCelebration => _boundaryCelebration;
+  void clearBoundaryCelebration() {
+    if (_boundaryCelebration != null) {
+      _boundaryCelebration = null;
+      notifyListeners();
+    }
+  }
+
   CricketMatch? get match => _match;
   Innings? get currentInnings => _currentInnings;
   Innings? get firstInnings => _firstInnings;
@@ -80,13 +97,17 @@ class ScoringProvider extends ChangeNotifier {
   Player? get previousBowler => _previousBowler;
 
   int? _customMaxOversPerBowler; // null = auto calculate, 0 = Unlimited (no limit), > 0 = custom limit
-  int? get customMaxOversPerBowler => _customMaxOversPerBowler;
+  int? get customMaxOversPerBowler => _customMaxOversPerBowler ?? _match?.maxOversPerBowler;
 
-  bool get isUnlimitedBowlerOvers => _customMaxOversPerBowler == 0 || (_customMaxOversPerBowler == null && _match?.format == 'Test');
+  bool get isUnlimitedBowlerOvers {
+    final limit = _customMaxOversPerBowler ?? _match?.maxOversPerBowler;
+    return limit == 0 || (limit == null && _match?.format == 'Test');
+  }
 
   int get maxOversPerBowler {
-    if (_customMaxOversPerBowler != null) {
-      return _customMaxOversPerBowler!;
+    final limit = _customMaxOversPerBowler ?? _match?.maxOversPerBowler;
+    if (limit != null) {
+      return limit;
     }
     if (_match == null) return 4;
     if (_match!.totalOvers <= 5) return 2;
@@ -95,6 +116,17 @@ class ScoringProvider extends ChangeNotifier {
 
   void setMaxOversPerBowler(int? limit) {
     _customMaxOversPerBowler = limit;
+    if (_match != null) {
+      _match = _match!.copyWith(maxOversPerBowler: limit);
+      _matchRepo.updateMatch(_match!);
+    }
+    notifyListeners();
+  }
+
+  @visibleForTesting
+  void setMatchForTesting(CricketMatch match) {
+    _match = match;
+    _customMaxOversPerBowler = match.maxOversPerBowler;
     notifyListeners();
   }
 
@@ -237,6 +269,7 @@ class ScoringProvider extends ChangeNotifier {
     _isMatchComplete = false;
     _matchResultSummary = null;
     _customMaxOversPerBowler = null;
+    _boundaryCelebration = null;
   }
 
   // --- INITIALIZATION ---
@@ -247,6 +280,7 @@ class ScoringProvider extends ChangeNotifier {
     try {
       _match = await _matchRepo.getMatchById(matchId);
       if (_match == null) return;
+      _customMaxOversPerBowler = _match!.maxOversPerBowler;
 
       final allInnings = await _scoringRepo.getInningsForMatch(matchId);
       if (allInnings.isEmpty) return;
@@ -511,12 +545,17 @@ class ScoringProvider extends ChangeNotifier {
     required String newBatsmanId,
     int runsCompleted = 0,
   }) async {
-    final newBatter = _battingSquad.firstWhere((p) => p.id == newBatsmanId);
+    final wtLower = wicketType.toLowerCase();
+    final isRetired = wtLower == 'retired hurt' || wtLower == 'retired out';
+    // Retired Hurt/Out does NOT count as a legal ball and does NOT count as a wicket
+    // in match statistics, but we still record the ball event for audit/return purposes.
+    final Player newBatter = _battingSquad.firstWhere((p) => p.id == newBatsmanId);
 
     await recordBall(
       runsBat: runsCompleted,
-      isLegal: wicketType.toLowerCase() != 'retired hurt' && wicketType.toLowerCase() != 'retired out',
+      isLegal: !isRetired && wtLower != 'wide',
       isWicket: true,
+      isRetiredEvent: isRetired,
       wicketType: wicketType,
       dismissedPlayerId: dismissedPlayerId,
       fielderId: fielderId,
@@ -531,6 +570,9 @@ class ScoringProvider extends ChangeNotifier {
     String extraType = 'none',
     bool isLegal = true,
     bool isWicket = false,
+    // Set true for Retired Hurt / Retired Out — these are NOT real wickets
+    // and must not increment wicket count or create a FOW entry.
+    bool isRetiredEvent = false,
     String? wicketType,
     String? dismissedPlayerId,
     String? fielderId,
@@ -600,6 +642,21 @@ class ScoringProvider extends ChangeNotifier {
       timestamp: DateTime.now().millisecondsSinceEpoch,
     );
 
+    // Broadcast Boundary Celebration Event trigger (strictly visual, non-blocking)
+    if (runsBat == 4) {
+      _boundaryCelebration = BoundaryCelebration(
+        type: BoundaryType.four,
+        timestamp: DateTime.now().microsecondsSinceEpoch,
+      );
+    } else if (runsBat == 6) {
+      _boundaryCelebration = BoundaryCelebration(
+        type: BoundaryType.six,
+        timestamp: DateTime.now().microsecondsSinceEpoch,
+      );
+    } else {
+      _boundaryCelebration = null;
+    }
+
     // 2. Updated Innings Model
     final newWides = _currentInnings!.wides + (extraType == 'wide' ? extraRuns : 0);
     final newNoBalls = _currentInnings!.noBalls + (extraType == 'noball' ? extraRuns : 0);
@@ -607,7 +664,8 @@ class ScoringProvider extends ChangeNotifier {
     final newLegByes = _currentInnings!.legByes + (extraType == 'legbye' ? extraRuns : 0);
     final newPenalty = _currentInnings!.penaltyRuns + (extraType == 'penalty' ? extraRuns : 0);
     final newTotalRuns = _currentInnings!.totalRuns + totalBallRuns;
-    final newWickets = _currentInnings!.totalWickets + (isWicket ? 1 : 0);
+    // Retired Hurt / Retired Out must NOT increment the wicket counter
+    final newWickets = _currentInnings!.totalWickets + (isWicket && !isRetiredEvent ? 1 : 0);
     final newLegalBalls = _currentInnings!.totalLegalBalls + (isLegal ? 1 : 0);
 
     final updatedInnings = _currentInnings!.copyWith(
@@ -706,9 +764,9 @@ class ScoringProvider extends ChangeNotifier {
       );
     }
 
-    // 6. Fall of Wicket if wicket
+    // 6. Fall of Wicket if wicket — NOT for Retired Hurt / Retired Out
     FallOfWicket? newFow;
-    if (isWicket) {
+    if (isWicket && !isRetiredEvent) {
       final dismissedName = (dismissedPlayerId == _nonStriker?.id) ? _nonStriker!.name : _striker!.name;
       final dismissedId = dismissedPlayerId ?? _striker!.id;
 
@@ -762,27 +820,49 @@ class ScoringProvider extends ChangeNotifier {
       }
 
       // Add batting stat for new batsman
-      final newBatStat = BattingStat(
-        id: _uuid.v4(),
-        inningsId: _currentInnings!.id,
-        playerId: newBatsman.id,
-        playerName: newBatsman.name,
-        battingOrder: _battingStats.length + 1,
-      );
-      _battingStats.add(newBatStat);
-      await _scoringRepo.upsertBattingStat(newBatStat);
+      if (!_battingStats.any((s) => s.playerId == newBatsman.id)) {
+        final newBatStat = BattingStat(
+          id: _uuid.v4(),
+          inningsId: _currentInnings!.id,
+          playerId: newBatsman.id,
+          playerName: newBatsman.name,
+          battingOrder: _battingStats.length + 1,
+        );
+        _battingStats.add(newBatStat);
+        await _scoringRepo.upsertBattingStat(newBatStat);
+      }
 
-      // Start new unbroken partnership
-      _currentPartnership = Partnership(
-        id: _uuid.v4(),
-        inningsId: _currentInnings!.id,
-        wicketNumber: newWickets + 1,
-        batter1Id: _striker!.id,
-        batter1Name: _striker!.name,
-        batter2Id: _nonStriker!.id,
-        batter2Name: _nonStriker!.name,
-      );
-      await _scoringRepo.upsertPartnership(_currentPartnership!);
+      // For retired events, keep current partnership intact (player is retiring, not out)
+      // For real wickets, start a new partnership
+      if (!isRetiredEvent) {
+        _currentPartnership = Partnership(
+          id: _uuid.v4(),
+          inningsId: _currentInnings!.id,
+          wicketNumber: newWickets + 1,
+          batter1Id: _striker!.id,
+          batter1Name: _striker!.name,
+          batter2Id: _nonStriker!.id,
+          batter2Name: _nonStriker!.name,
+        );
+        await _scoringRepo.upsertPartnership(_currentPartnership!);
+      } else {
+        // Retired: update existing partnership with the incoming batter's id
+        if (_currentPartnership != null) {
+          final retiredId = dismissedPlayerId ?? _striker!.id;
+          if (_currentPartnership!.batter1Id == retiredId) {
+            _currentPartnership = _currentPartnership!.copyWith(
+              batter1Id: newBatsman.id,
+              batter1Name: newBatsman.name,
+            );
+          } else if (_currentPartnership!.batter2Id == retiredId) {
+            _currentPartnership = _currentPartnership!.copyWith(
+              batter2Id: newBatsman.id,
+              batter2Name: newBatsman.name,
+            );
+          }
+          await _scoringRepo.upsertPartnership(_currentPartnership!);
+        }
+      }
     }
 
     // Check if over completed (6 legal balls in over)
@@ -1011,10 +1091,14 @@ class ScoringProvider extends ChangeNotifier {
 
     final lastBall = _allBalls.last;
     final ballsPerOver = _match?.ballsPerOver ?? 6;
+    final wtLower = lastBall.wicketType?.toLowerCase();
+    final isRetiredBall = wtLower == 'retired hurt' || wtLower == 'retired out';
 
     // 1. Revert Innings
     final revertedRuns = _currentInnings!.totalRuns - lastBall.totalRuns;
-    final revertedWickets = _currentInnings!.totalWickets - (lastBall.isWicket ? 1 : 0);
+    // Retired Hurt does not count as a wicket — so do not subtract
+    final revertedWickets = _currentInnings!.totalWickets -
+        (lastBall.isWicket && !isRetiredBall ? 1 : 0);
     final revertedLegalBalls = _currentInnings!.totalLegalBalls - (lastBall.isLegalBall ? 1 : 0);
 
     final revertedWides = _currentInnings!.wides - (lastBall.extraType == 'wide' ? lastBall.extras : 0);
@@ -1035,49 +1119,91 @@ class ScoringProvider extends ChangeNotifier {
     );
 
     // 2. Revert Striker Stat
-    final strikerBeforeBall = _battingSquad.firstWhere((p) => p.id == lastBall.batsmanId);
-    final strikerS = _battingStats.firstWhere((s) => s.playerId == lastBall.batsmanId);
-
-    final revertedStrikerS = strikerS.copyWith(
-      runs: strikerS.runs - lastBall.runsBat >= 0 ? strikerS.runs - lastBall.runsBat : 0,
-      balls: strikerS.balls - (lastBall.isLegalBall || lastBall.extraType == 'noball' ? 1 : 0) >= 0
-          ? strikerS.balls - (lastBall.isLegalBall || lastBall.extraType == 'noball' ? 1 : 0)
-          : 0,
-      fours: lastBall.runsBat == 4 ? strikerS.fours - 1 : strikerS.fours,
-      sixes: lastBall.runsBat == 6 ? strikerS.sixes - 1 : strikerS.sixes,
-      dots: (lastBall.runsBat == 0 && lastBall.isLegalBall) ? strikerS.dots - 1 : strikerS.dots,
-      isOut: lastBall.isWicket && (lastBall.dismissedPlayerId == lastBall.batsmanId || lastBall.dismissedPlayerId == null)
-          ? false
-          : strikerS.isOut,
-      dismissalType: null,
-      bowlerName: null,
-      fielderName: null,
+    final strikerBeforeBall = _battingSquad.cast<Player?>().firstWhere(
+      (p) => p?.id == lastBall.batsmanId,
+      orElse: () => null,
     );
+    BattingStat? revertedStrikerS;
+    if (strikerBeforeBall != null) {
+      final strikerS = _battingStats.cast<BattingStat?>().firstWhere(
+        (s) => s?.playerId == lastBall.batsmanId,
+        orElse: () => null,
+      );
+      if (strikerS != null) {
+        final isStrikerDismissed = lastBall.isWicket &&
+            (lastBall.dismissedPlayerId == lastBall.batsmanId ||
+                lastBall.dismissedPlayerId == null);
+        revertedStrikerS = strikerS.copyWith(
+          runs: (strikerS.runs - lastBall.runsBat).clamp(0, strikerS.runs),
+          balls: (strikerS.balls -
+                  (lastBall.isLegalBall || lastBall.extraType == 'noball' ? 1 : 0))
+              .clamp(0, strikerS.balls),
+          fours: lastBall.runsBat == 4
+              ? (strikerS.fours - 1).clamp(0, strikerS.fours)
+              : strikerS.fours,
+          sixes: lastBall.runsBat == 6
+              ? (strikerS.sixes - 1).clamp(0, strikerS.sixes)
+              : strikerS.sixes,
+          dots: (lastBall.runsBat == 0 && lastBall.isLegalBall)
+              ? (strikerS.dots - 1).clamp(0, strikerS.dots)
+              : strikerS.dots,
+          isOut: isStrikerDismissed ? false : strikerS.isOut,
+          // Only clear dismissal fields if this ball caused the dismissal
+          dismissalType: isStrikerDismissed ? null : strikerS.dismissalType,
+          bowlerName: isStrikerDismissed ? null : strikerS.bowlerName,
+          fielderName: isStrikerDismissed ? null : strikerS.fielderName,
+        );
+      }
+    }
 
     // 3. Revert Bowler Stat
-    final bowlerS = _bowlingStats.firstWhere((s) => s.playerId == lastBall.bowlerId);
-    final bowlerRuns = lastBall.runsBat + (lastBall.extraType == 'wide' || lastBall.extraType == 'noball' ? lastBall.extras : 0);
-    final isBowlerWicket = lastBall.isWicket &&
-        lastBall.wicketType != 'run out' &&
-        lastBall.wicketType != 'runout' &&
-        lastBall.wicketType != 'retired hurt' &&
-        lastBall.wicketType != 'retired out';
-
-    final revertedBowlerS = bowlerS.copyWith(
-      totalLegalBalls: lastBall.isLegalBall ? bowlerS.totalLegalBalls - 1 : bowlerS.totalLegalBalls,
-      runsConceded: bowlerS.runsConceded - bowlerRuns >= 0 ? bowlerS.runsConceded - bowlerRuns : 0,
-      wickets: isBowlerWicket ? bowlerS.wickets - 1 : bowlerS.wickets,
-      wides: lastBall.extraType == 'wide' ? bowlerS.wides - lastBall.extras : bowlerS.wides,
-      noBalls: lastBall.extraType == 'noball' ? bowlerS.noBalls - lastBall.extras : bowlerS.noBalls,
-      dots: (lastBall.runsBat == 0 && lastBall.extras == 0) ? bowlerS.dots - 1 : bowlerS.dots,
+    final bowlerS = _bowlingStats.cast<BowlingStat?>().firstWhere(
+      (s) => s?.playerId == lastBall.bowlerId,
+      orElse: () => null,
     );
+    BowlingStat? revertedBowlerS;
+    if (bowlerS != null) {
+      final bowlerRuns = lastBall.runsBat +
+          (lastBall.extraType == 'wide' || lastBall.extraType == 'noball'
+              ? lastBall.extras
+              : 0);
+      final isBowlerWicket = lastBall.isWicket &&
+          wtLower != 'run out' &&
+          wtLower != 'runout' &&
+          wtLower != 'retired hurt' &&
+          wtLower != 'retired out';
+      revertedBowlerS = bowlerS.copyWith(
+        totalLegalBalls: lastBall.isLegalBall
+            ? (bowlerS.totalLegalBalls - 1).clamp(0, bowlerS.totalLegalBalls)
+            : bowlerS.totalLegalBalls,
+        runsConceded:
+            (bowlerS.runsConceded - bowlerRuns).clamp(0, bowlerS.runsConceded),
+        wickets: isBowlerWicket
+            ? (bowlerS.wickets - 1).clamp(0, bowlerS.wickets)
+            : bowlerS.wickets,
+        wides: lastBall.extraType == 'wide'
+            ? (bowlerS.wides - lastBall.extras).clamp(0, bowlerS.wides)
+            : bowlerS.wides,
+        noBalls: lastBall.extraType == 'noball'
+            ? (bowlerS.noBalls - lastBall.extras).clamp(0, bowlerS.noBalls)
+            : bowlerS.noBalls,
+        dots: (lastBall.runsBat == 0 && lastBall.extras == 0)
+            ? (bowlerS.dots - 1).clamp(0, bowlerS.dots)
+            : bowlerS.dots,
+      );
+    }
 
-    // 4. Fall of Wicket delete
+    // 4. Fall of Wicket delete — only for real wickets (not retired)
     String? fowIdToDelete;
-    if (lastBall.isWicket && _fallOfWickets.isNotEmpty) {
+    if (lastBall.isWicket && !isRetiredBall && _fallOfWickets.isNotEmpty) {
       fowIdToDelete = _fallOfWickets.last.id;
       _fallOfWickets.removeLast();
     }
+
+    // 5. Revert Partnership
+    // Recompute the current partnership from remaining balls (after removing last)
+    final remainingBalls = _allBalls.sublist(0, _allBalls.length - 1);
+    Partnership? revertedPartnership = await _recomputeCurrentPartnership(remainingBalls);
 
     // Execute Undo Transaction
     await _scoringRepo.undoBallTransaction(
@@ -1085,26 +1211,105 @@ class ScoringProvider extends ChangeNotifier {
       revertedInnings: revertedInnings,
       strikerStat: revertedStrikerS,
       bowlerStat: revertedBowlerS,
+      updatedPartnership: revertedPartnership,
       fowIdToDelete: fowIdToDelete,
     );
 
     // Update in-memory state
     _allBalls.removeLast();
     _currentInnings = revertedInnings;
-    _updateInMemoryBattingStat(revertedStrikerS);
-    _updateInMemoryBowlingStat(revertedBowlerS);
+    if (revertedStrikerS != null) _updateInMemoryBattingStat(revertedStrikerS);
+    if (revertedBowlerS != null) _updateInMemoryBowlingStat(revertedBowlerS);
+    _currentPartnership = revertedPartnership;
 
     // Revert active striker, non-striker, bowler
-    _striker = strikerBeforeBall;
-    _nonStriker = _battingSquad.firstWhere((p) => p.id == lastBall.nonStrikerId);
-    _currentBowler = _bowlingSquad.firstWhere((p) => p.id == lastBall.bowlerId);
+    if (strikerBeforeBall != null) _striker = strikerBeforeBall;
+    final nonStrikerBeforeBall = _battingSquad.cast<Player?>().firstWhere(
+      (p) => p?.id == lastBall.nonStrikerId,
+      orElse: () => null,
+    );
+    if (nonStrikerBeforeBall != null) _nonStriker = nonStrikerBeforeBall;
+    final bowlerBeforeBall = _bowlingSquad.cast<Player?>().firstWhere(
+      (p) => p?.id == lastBall.bowlerId,
+      orElse: () => null,
+    );
+    if (bowlerBeforeBall != null) _currentBowler = bowlerBeforeBall;
 
-    _isOverComplete = revertedLegalBalls > 0 && (revertedLegalBalls % ballsPerOver == 0);
+    final rl = revertedLegalBalls >= 0 ? revertedLegalBalls : 0;
+    _isOverComplete = rl > 0 && (rl % ballsPerOver == 0);
     _isInningsComplete = false;
     _isMatchComplete = false;
+    _boundaryCelebration = null;
     _checkInningsStatus();
 
     notifyListeners();
+  }
+
+  /// Recompute the current (latest) partnership from the given ball list.
+  /// This is the source-of-truth recomputation used for Undo.
+  Future<Partnership?> _recomputeCurrentPartnership(List<Ball> balls) async {
+    if (_currentInnings == null) return null;
+    // Load all persisted partnerships for reference
+    final allPartnerships = await _scoringRepo.getPartnerships(_currentInnings!.id);
+    if (allPartnerships.isEmpty && _currentPartnership == null) return null;
+
+    // Find which partnership is active by tracing ball history
+    // Start from the last partnership and rebuild its stats from balls
+    // A new partnership starts after each REAL wicket ball
+    int partnershipStartIndex = 0;
+    int partnershipWicketNumber = 1;
+    for (int i = 0; i < balls.length; i++) {
+      final b = balls[i];
+      final bWtLower = b.wicketType?.toLowerCase();
+      final bIsRetired = bWtLower == 'retired hurt' || bWtLower == 'retired out';
+      if (b.isWicket && !bIsRetired) {
+        partnershipStartIndex = i + 1;
+        partnershipWicketNumber++;
+      }
+    }
+
+    // Find the matching stored partnership record
+    Partnership? basePartnership;
+    if (allPartnerships.isNotEmpty) {
+      try {
+        basePartnership = allPartnerships.lastWhere(
+          (p) => p.wicketNumber == partnershipWicketNumber,
+        );
+      } catch (_) {
+        basePartnership = allPartnerships.last;
+      }
+    } else {
+      basePartnership = _currentPartnership;
+    }
+    if (basePartnership == null) return null;
+
+    // Recalculate stats for balls that belong to this partnership
+    final pBalls = balls.sublist(partnershipStartIndex);
+    int b1Runs = 0, b1Balls = 0, b2Runs = 0, b2Balls = 0;
+    int totalRuns = 0, totalBalls = 0;
+
+    for (final b in pBalls) {
+      final isB1 = b.batsmanId == basePartnership.batter1Id;
+      if (isB1) {
+        b1Runs += b.runsBat;
+        if (b.isLegalBall) b1Balls++;
+      } else if (b.batsmanId == basePartnership.batter2Id) {
+        b2Runs += b.runsBat;
+        if (b.isLegalBall) b2Balls++;
+      }
+      totalRuns += b.totalRuns;
+      if (b.isLegalBall) totalBalls++;
+    }
+
+    return basePartnership.copyWith(
+      batter1Runs: b1Runs,
+      batter1Balls: b1Balls,
+      batter2Runs: b2Runs,
+      batter2Balls: b2Balls,
+      totalRuns: totalRuns,
+      totalBalls: totalBalls,
+      isUnbroken: true,
+    );
   }
 
   // --- INNINGS & MATCH TRANSITIONS ---

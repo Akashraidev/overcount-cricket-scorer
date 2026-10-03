@@ -148,7 +148,7 @@ class _SuggestionTextFieldState extends State<SuggestionTextField> {
                         shrinkWrap: true,
                         padding: const EdgeInsets.symmetric(vertical: 4),
                         itemCount: _suggestions.length,
-                        separatorBuilder: (_, __) => Divider(
+                        separatorBuilder: (_, _) => Divider(
                           height: 1,
                           color: isDark ? AppColors.darkBorder : AppColors.lightBorder,
                         ),

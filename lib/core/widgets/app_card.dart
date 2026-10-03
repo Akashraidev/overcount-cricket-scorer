@@ -46,13 +46,24 @@ class AppCard extends StatelessWidget {
         boxShadow: hasGlow
             ? [
                 BoxShadow(
-                  color: (glowColor ?? AppColors.primary).withValues(alpha: 0.15),
-                  blurRadius: 16,
-                  spreadRadius: 1,
+                  color: (glowColor ?? AppColors.primary).withValues(alpha: isDark ? 0.22 : 0.14),
+                  blurRadius: 14,
+                  spreadRadius: 0,
                   offset: const Offset(0, 4),
-                )
+                ),
+                BoxShadow(
+                  color: isDark ? Colors.black.withValues(alpha: 0.3) : const Color(0x0A000000),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
               ]
-            : null,
+            : [
+                BoxShadow(
+                  color: isDark ? Colors.black.withValues(alpha: 0.25) : const Color(0x08000000),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
       ),
       child: Padding(
         padding: padding ?? AppSpacing.cardPadding,

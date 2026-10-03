@@ -30,7 +30,7 @@ class LiveBowlerCard extends StatelessWidget {
     final eco = bowlerStat?.economy.toStringAsFixed(2) ?? '0.00';
 
     return AppCard(
-      padding: const EdgeInsets.all(14),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       child: Column(
         children: [
           Row(
@@ -41,6 +41,7 @@ class LiveBowlerCard extends StatelessWidget {
                 style: AppTextStyles.label.copyWith(
                   color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                   letterSpacing: 1.0,
+                  fontSize: 10.5,
                 ),
               ),
               InkWell(
@@ -52,15 +53,16 @@ class LiveBowlerCard extends StatelessWidget {
                     children: [
                       Icon(
                         hasBowler ? Icons.change_circle_outlined : Icons.person_add_alt_1,
-                        size: 16,
+                        size: 15,
                         color: AppColors.primary,
                       ),
-                      const SizedBox(width: 4),
+                      const SizedBox(width: 3),
                       Text(
                         hasBowler ? 'Change Bowler' : '+ Add Bowler',
                         style: AppTextStyles.label.copyWith(
                           color: AppColors.primary,
                           fontWeight: FontWeight.bold,
+                          fontSize: 11,
                         ),
                       ),
                     ],
@@ -69,7 +71,7 @@ class LiveBowlerCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 6),
 
           if (hasBowler)
             InkWell(
@@ -77,13 +79,14 @@ class LiveBowlerCard extends StatelessWidget {
               borderRadius: AppRadius.roundedSm,
               child: Row(
                 children: [
-                  const Icon(Icons.sports_baseball, size: 18, color: AppColors.accent),
-                  const SizedBox(width: 8),
+                  const Icon(Icons.sports_baseball, size: 16, color: AppColors.accent),
+                  const SizedBox(width: 7),
                   Expanded(
                     child: Text(
                       bowler!.name,
                       style: AppTextStyles.bodyLarge.copyWith(
                         fontWeight: FontWeight.bold,
+                        fontSize: 14.5,
                         color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       ),
                       maxLines: 1,
@@ -96,16 +99,16 @@ class LiveBowlerCard extends StatelessWidget {
                     style: AppTextStyles.scoreSmall.copyWith(
                       color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
                       fontWeight: FontWeight.bold,
-                      fontSize: 14,
+                      fontSize: 13.5,
                     ),
                   ),
-                  const SizedBox(width: 14),
+                  const SizedBox(width: 10),
                   // Economy
                   Text(
                     'Eco: $eco',
                     style: AppTextStyles.bodySmall.copyWith(
                       color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
-                      fontSize: 11,
+                      fontSize: 10.5,
                     ),
                   ),
                 ],
@@ -117,7 +120,7 @@ class LiveBowlerCard extends StatelessWidget {
               borderRadius: AppRadius.roundedSm,
               child: Container(
                 width: double.infinity,
-                padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 10),
                 decoration: BoxDecoration(
                   color: AppColors.primary.withValues(alpha: isDark ? 0.15 : 0.08),
                   borderRadius: AppRadius.roundedSm,

@@ -5,6 +5,7 @@ import '../../../core/constants/app_text_styles.dart';
 import '../../../core/widgets/app_button.dart';
 import '../../../core/widgets/app_card.dart';
 import '../../../core/widgets/app_text_field.dart';
+import '../../../core/services/local_scoring_service.dart';
 import '../live_scoring_viewer_screen.dart';
 import '../local_scoring_provider.dart';
 
@@ -44,8 +45,21 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
     super.dispose();
   }
 
-  Future<void> _attemptConnect(String pin, {String? manualIp}) async {
-    final cleanPin = pin.replaceAll(RegExp(r'\D'), '').trim();
+  Future<void> _attemptConnect(String input, {String? manualIp}) async {
+    String cleanPin = input.trim();
+    String? resolvedIp = manualIp;
+    int? resolvedPort;
+
+    // Support pasted or scanned QR code URI: scorecard://live?host=...&port=...&pin=...
+    final parsed = LocalScoringService.parseQrPayload(input);
+    if (parsed != null) {
+      cleanPin = parsed.pin;
+      resolvedIp = parsed.host;
+      resolvedPort = parsed.port;
+    } else {
+      cleanPin = cleanPin.replaceAll(RegExp(r'\D'), '').trim();
+    }
+
     if (cleanPin.length != 6) {
       setState(() {
         _errorMessage = 'Please enter a valid 6-digit connection code.';
@@ -61,7 +75,8 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
     final localProv = context.read<LocalScoringProvider>();
     final success = await localProv.joinAsViewer(
       cleanPin,
-      directHostIp: manualIp?.trim().isNotEmpty == true ? manualIp!.trim() : null,
+      directHostIp: resolvedIp?.trim().isNotEmpty == true ? resolvedIp!.trim() : null,
+      directPort: resolvedPort,
     );
 
     if (!mounted) return;
@@ -80,7 +95,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
     } else {
       setState(() {
         _errorMessage = localProv.viewerError ??
-            'Could not find Host with this code on the Wi-Fi. Make sure both phones are connected to the same Wi-Fi network.';
+            'Could not find Host with this code. Make sure your phone is connected to the host\'s Hotspot or same Wi-Fi network.';
       });
     }
   }
@@ -120,7 +135,7 @@ class _JoinMatchDialogState extends State<JoinMatchDialog> {
                       children: [
                         Text('Join Live Match', style: AppTextStyles.h3.copyWith(fontSize: 18)),
                         Text(
-                          'Same Wi-Fi Network (Read-Only)',
+                          'Hotspot or Local Wi-Fi (Read-Only)',
                           style: AppTextStyles.bodySmall.copyWith(
                             color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
                           ),

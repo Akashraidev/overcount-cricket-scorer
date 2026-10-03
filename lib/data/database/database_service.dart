@@ -34,7 +34,7 @@ class DatabaseService {
 
     return await openDatabase(
       dbPath,
-      version: 2,
+      version: 3,
       onConfigure: (db) async {
         await db.execute('PRAGMA foreign_keys = ON;');
       },
@@ -49,10 +49,18 @@ class DatabaseService {
             await db.execute('ALTER TABLE ${DbTables.players} ADD COLUMN photoUrl TEXT;');
           } catch (_) {}
         }
+        if (oldVersion < 3) {
+          try {
+            await db.execute('ALTER TABLE ${DbTables.matches} ADD COLUMN maxOversPerBowler INTEGER;');
+          } catch (_) {}
+        }
       },
       onOpen: (db) async {
         try {
           await db.execute('ALTER TABLE ${DbTables.players} ADD COLUMN photoUrl TEXT;');
+        } catch (_) {}
+        try {
+          await db.execute('ALTER TABLE ${DbTables.matches} ADD COLUMN maxOversPerBowler INTEGER;');
         } catch (_) {}
       },
     );

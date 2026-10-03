@@ -77,10 +77,11 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> with SingleTicker
           ),
         ],
         bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(88),
+          preferredSize: Size.fromHeight(allInnings.length > 1 ? 88 : 48),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             children: [
-              // Innings Selector Pills
+              // Innings Selector Pills (only rendered when multiple innings exist)
               if (allInnings.length > 1)
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
@@ -131,6 +132,8 @@ class _MatchDetailScreenState extends State<MatchDetailScreen> with SingleTicker
               TabBar(
                 controller: _tabController,
                 isScrollable: true,
+                tabAlignment: TabAlignment.start,
+                padding: const EdgeInsets.symmetric(horizontal: 8),
                 tabs: const [
                   Tab(text: 'Scorecard'),
                   Tab(text: 'Commentary'),

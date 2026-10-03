@@ -37,6 +37,7 @@ class LocalScoringProvider extends ChangeNotifier {
   ViewerConnectionStatus get viewerStatus => _service.viewerStatus;
   String? get viewerError => _service.viewerError;
   LiveMatchSnapshot? get liveSnapshot => _service.latestSnapshot;
+  String? get qrPayload => _service.qrPayload;
   List<DiscoveredMatchBeacon> get discoveredMatches => _service.discoveredMatches;
 
   Future<String?> startHosting(ScoringProvider scoringProv, {String? customPin}) async {
@@ -100,6 +101,17 @@ class LocalScoringProvider extends ChangeNotifier {
     );
     notifyListeners();
     return ok;
+  }
+
+  Future<bool> joinFromQrPayload(String payload, {String? deviceName}) async {
+    final parsed = LocalScoringService.parseQrPayload(payload);
+    if (parsed == null) return false;
+    return await joinAsViewer(
+      parsed.pin,
+      directHostIp: parsed.host,
+      directPort: parsed.port,
+      deviceName: deviceName,
+    );
   }
 
   void leaveViewerSession() {

@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import '../../core/constants/app_colors.dart';
@@ -299,25 +300,86 @@ class StatsChartsTab extends StatelessWidget {
           const SizedBox(height: 12),
           if (barGroups.isNotEmpty)
             AppCard(
-              padding: const EdgeInsets.fromLTRB(16, 20, 20, 16),
-              child: SizedBox(
-                height: 200,
-                child: BarChart(
-                  BarChartData(
-                    barGroups: barGroups,
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(
-                      show: true,
-                      border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              padding: const EdgeInsets.fromLTRB(14, 18, 16, 14),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  final double minWidthPerBar = barGroups.length > 15 ? 20.0 : 26.0;
+                  final double requiredWidth = math.max(constraints.maxWidth, barGroups.length * minWidthPerBar + 38.0);
+                  final bool isScrollable = requiredWidth > constraints.maxWidth;
+                  final double chartWidth = isScrollable ? requiredWidth : constraints.maxWidth;
+
+                  final chartWidget = SizedBox(
+                    width: chartWidth,
+                    height: 200,
+                    child: BarChart(
+                      BarChartData(
+                        barGroups: barGroups,
+                        gridData: const FlGridData(show: false),
+                        borderData: FlBorderData(
+                          show: true,
+                          border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                        ),
+                        titlesData: FlTitlesData(
+                          leftTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 28,
+                              getTitlesWidget: (value, meta) {
+                                if (value % 5 != 0 && value != meta.max && value != meta.min) {
+                                  return const SizedBox.shrink();
+                                }
+                                return SideTitleWidget(
+                                  axisSide: meta.axisSide,
+                                  space: 2,
+                                  child: Text(
+                                    '${value.toInt()}',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      color: isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          bottomTitles: AxisTitles(
+                            sideTitles: SideTitles(
+                              showTitles: true,
+                              reservedSize: 22,
+                              interval: 1,
+                              getTitlesWidget: (value, meta) {
+                                final ov = value.toInt();
+                                return SideTitleWidget(
+                                  axisSide: meta.axisSide,
+                                  space: 4,
+                                  child: Text(
+                                    '$ov',
+                                    style: TextStyle(
+                                      fontSize: 9,
+                                      fontWeight: FontWeight.w600,
+                                      color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                                    ),
+                                  ),
+                                );
+                              },
+                            ),
+                          ),
+                          topTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                          rightTitles: const AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                        ),
+                      ),
                     ),
-                    titlesData: const FlTitlesData(
-                      leftTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 28)),
-                      bottomTitles: AxisTitles(sideTitles: SideTitles(showTitles: true, reservedSize: 22)),
-                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                    ),
-                  ),
-                ),
+                  );
+
+                  if (isScrollable) {
+                    return SingleChildScrollView(
+                      scrollDirection: Axis.horizontal,
+                      physics: const BouncingScrollPhysics(),
+                      child: chartWidget,
+                    );
+                  }
+                  return chartWidget;
+                },
               ),
             )
           else

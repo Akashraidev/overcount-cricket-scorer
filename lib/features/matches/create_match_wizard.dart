@@ -9,7 +9,6 @@ import '../../core/widgets/app_card.dart';
 import '../../core/widgets/app_dialog.dart';
 import '../../core/widgets/app_dropdown.dart';
 import '../../core/widgets/app_text_field.dart';
-import '../../core/widgets/section_header.dart';
 import '../../core/widgets/suggestion_text_field.dart';
 import '../../data/models/team.dart';
 import '../../data/models/player.dart';
@@ -38,14 +37,18 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
   late TextEditingController _wicketsController;
   late TextEditingController _bowlerLimitController;
 
-  final List<String> _formats = const ['T20', 'T10', 'ODI', 'Test', 'Custom'];
+  final List<String> _formats = const ['T10', 'T12', 'T20', 'ODI', 'Test', 'Custom'];
+  final List<String> _stepLabels = const ['Details', 'Teams', 'Squad', 'Toss', 'Openers'];
 
   final List<String> _defaultTitles = const [
-    'Final: Championship Match',
-    'Semi Final Match',
-    'League Match 1',
     'Sunday Friendly Match',
     'T20 Cup Match',
+    'Final: Championship Match',
+    'Weekend Cricket Match',
+    'Semi Final Match',
+    'League Match 1',
+    'Night Cricket Match',
+    'One Day Match',
   ];
 
   final List<String> _defaultVenues = const [
@@ -119,6 +122,12 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
         draft.maxOversPerBowler = 2;
         _bowlerLimitController.text = '2';
         break;
+      case 'T12':
+        draft.totalOvers = 12;
+        _oversController.text = '12';
+        draft.maxOversPerBowler = 3;
+        _bowlerLimitController.text = '3';
+        break;
       case 'T20':
         draft.totalOvers = 20;
         _oversController.text = '20';
@@ -143,6 +152,7 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     setState(() {});
   }
 
+
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
@@ -157,51 +167,149 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
       ),
       body: Column(
         children: [
-          // Step Progress Bar
+          // Step Progress Bar — Modern Gradient Stepper with Perfect Symmetry & Centered Alignment
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-            child: Row(
-              children: List.generate(5, (index) {
-                final isPassed = index <= _currentStep;
-                final isCurrent = index == _currentStep;
-                return Expanded(
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              gradient: isDark
+                  ? const LinearGradient(
+                      colors: [Color(0xFF1A1A1A), Color(0xFF101010)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    )
+                  : const LinearGradient(
+                      colors: [Colors.white, Color(0xFFF5F5F7)],
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                    ),
+              border: Border(
+                bottom: BorderSide(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              ),
+            ),
+            child: Center(
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 600),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: Row(
-                    children: [
-                      Container(
-                        width: 28,
-                        height: 28,
-                        decoration: BoxDecoration(
-                          color: isPassed
-                              ? AppColors.primary
-                              : (isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurfaceElevated),
-                          shape: BoxShape.circle,
-                          border: isCurrent ? Border.all(color: Colors.white, width: 2) : null,
-                        ),
-                        alignment: Alignment.center,
-                        child: Text(
-                          '${index + 1}',
-                          style: AppTextStyles.label.copyWith(
-                            color: isPassed
-                                ? Colors.white
-                                : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
-                            fontWeight: FontWeight.bold,
+                    children: List.generate(5, (index) {
+                      final isPassed = index <= _currentStep;
+                      final isCurrent = index == _currentStep;
+
+                      return Expanded(
+                        child: InkWell(
+                          borderRadius: BorderRadius.circular(8),
+                          onTap: index < _currentStep
+                              ? () => setState(() => _currentStep = index)
+                              : null,
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // Circle + Connector lines on left and right
+                              Row(
+                                children: [
+                                  // Left half connector
+                                  Expanded(
+                                    child: index == 0
+                                        ? const SizedBox()
+                                        : Container(
+                                            height: 3,
+                                            decoration: BoxDecoration(
+                                              gradient: index <= _currentStep
+                                                  ? AppColors.primaryGradient
+                                                  : null,
+                                              color: index <= _currentStep
+                                                  ? null
+                                                  : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                  ),
+
+                                  // Circle Indicator
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    decoration: BoxDecoration(
+                                      gradient: isPassed ? AppColors.primaryGradient : null,
+                                      color: isPassed
+                                        ? null
+                                        : (isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurfaceElevated),
+                                      shape: BoxShape.circle,
+                                      border: isCurrent
+                                          ? Border.all(color: AppColors.primaryLight, width: 2)
+                                          : null,
+                                      boxShadow: isCurrent
+                                          ? [
+                                              BoxShadow(
+                                                color: AppColors.primary.withValues(alpha: 0.4),
+                                                blurRadius: 8,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ]
+                                          : null,
+                                    ),
+                                    alignment: Alignment.center,
+                                    child: isPassed && !isCurrent
+                                        ? const Icon(Icons.check_rounded, size: 15, color: Colors.white)
+                                        : Text(
+                                            '${index + 1}',
+                                            style: AppTextStyles.label.copyWith(
+                                              color: isPassed
+                                                  ? Colors.white
+                                                  : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+                                              fontWeight: FontWeight.w800,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                  ),
+
+                                  // Right half connector
+                                  Expanded(
+                                    child: index == 4
+                                        ? const SizedBox()
+                                        : Container(
+                                            height: 3,
+                                            decoration: BoxDecoration(
+                                              gradient: index < _currentStep
+                                                  ? AppColors.primaryGradient
+                                                  : null,
+                                              color: index < _currentStep
+                                                  ? null
+                                                  : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+
+                              // Label below circle (strictly centered directly under circle!)
+                              Text(
+                                _stepLabels[index],
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: AppTextStyles.label.copyWith(
+                                  fontSize: 10,
+                                  letterSpacing: 0.2,
+                                  color: isCurrent
+                                      ? AppColors.primary
+                                      : (isPassed
+                                          ? (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary)
+                                          : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted)),
+                                  fontWeight: isCurrent ? FontWeight.w800 : (isPassed ? FontWeight.w600 : FontWeight.w500),
+                                ),
+                              ),
+                            ],
                           ),
                         ),
-                      ),
-                      if (index < 4)
-                        Expanded(
-                          child: Container(
-                            height: 2,
-                            color: index < _currentStep
-                                ? AppColors.primary
-                                : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                          ),
-                        ),
-                    ],
+                      );
+                    }),
                   ),
-                );
-              }),
+                ),
+              ),
             ),
           ),
 
@@ -209,13 +317,18 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
           Expanded(
             child: SingleChildScrollView(
               padding: AppSpacing.screenPadding,
-              child: _buildStepContent(context, draft, teamProv, tourneyProv),
+              child: Align(
+                alignment: Alignment.topCenter,
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 800),
+                  child: _buildStepContent(context, draft, teamProv, tourneyProv),
+                ),
+              ),
             ),
           ),
 
-          // Bottom Navigation Buttons
+          // Bottom Navigation Buttons (with responsive bounds & SafeArea protection)
           Container(
-            padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: isDark ? AppColors.darkSurface : AppColors.lightSurface,
               border: Border(
@@ -224,26 +337,38 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
                 ),
               ),
             ),
-            child: Row(
-              children: [
-                if (_currentStep > 0) ...[
-                  Expanded(
-                    child: AppButton(
-                      label: 'Previous',
-                      variant: AppButtonVariant.secondary,
-                      onPressed: () => setState(() => _currentStep--),
+            child: SafeArea(
+              top: false,
+              child: Padding(
+                padding: const EdgeInsets.all(16),
+                child: Center(
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 800),
+                    child: Row(
+                      children: [
+                        if (_currentStep > 0) ...[
+                          Expanded(
+                            child: AppButton(
+                              label: 'Previous',
+                              variant: AppButtonVariant.secondary,
+                              onPressed: () => setState(() => _currentStep--),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                        Expanded(
+                          flex: 2,
+                          child: _buildGradientActionButton(
+                            _currentStep == 4 ? 'START MATCH 🏏' : 'Next Step',
+                            _currentStep == 4 ? Icons.play_arrow_rounded : Icons.arrow_forward_rounded,
+                            () => _handleNextStep(context, draft, teamProv),
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const SizedBox(width: 12),
-                ],
-                Expanded(
-                  flex: 2,
-                  child: AppButton(
-                    label: _currentStep == 4 ? 'START MATCH 🏏' : 'Next Step',
-                    onPressed: () => _handleNextStep(context, draft, teamProv),
-                  ),
                 ),
-              ],
+              ),
             ),
           ),
         ],
@@ -273,6 +398,158 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     }
   }
 
+  /// Modern gradient banner used at the top of every step.
+  Widget _buildStepBanner(
+    BuildContext context, {
+    required int step,
+    required String title,
+    String? subtitle,
+    Widget? trailing,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return Container(
+      padding: const EdgeInsets.fromLTRB(14, 12, 8, 12),
+      decoration: BoxDecoration(
+        gradient: isDark
+            ? AppColors.heroCardGradient
+            : const LinearGradient(
+                colors: [Colors.white, Color(0xFFF0F0F2)],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: isDark ? AppColors.darkBorder : AppColors.lightBorder),
+        boxShadow: [
+          BoxShadow(
+            color: isDark ? Colors.black.withValues(alpha: 0.2) : AppColors.primary.withValues(alpha: 0.06),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              gradient: AppColors.primaryGradient,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primary.withValues(alpha: 0.35),
+                  blurRadius: 6,
+                  offset: const Offset(0, 2),
+                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              '$step',
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.w800, fontSize: 17),
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  title,
+                  style: AppTextStyles.h3.copyWith(
+                    color: isDark ? Colors.white : AppColors.lightTextPrimary,
+                    fontSize: 15.5,
+                    fontWeight: FontWeight.w700,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (subtitle != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Text(
+                      subtitle,
+                      style: AppTextStyles.bodySmall.copyWith(
+                        color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          ?trailing,
+        ],
+      ),
+    );
+  }
+
+  /// Crimson gradient pill used for banner actions (visible on any banner background).
+  Widget _buildBannerAction(
+    BuildContext context, {
+    required String label,
+    required IconData icon,
+    required VoidCallback onPressed,
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    return OutlinedButton.icon(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        foregroundColor: isDark ? Colors.white : AppColors.primary,
+        side: BorderSide(
+          color: isDark
+              ? Colors.white.withValues(alpha: 0.4)
+              : AppColors.primary.withValues(alpha: 0.5),
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+        minimumSize: const Size(0, 32),
+        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+      ),
+      icon: Icon(icon, size: 15),
+      label: Text(label, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700)),
+    );
+  }
+
+  /// Primary gradient action button for the bottom navigation bar.
+  Widget _buildGradientActionButton(String label, IconData icon, VoidCallback onPressed) {
+    return Container(
+      height: 50,
+      decoration: BoxDecoration(
+        gradient: AppColors.primaryGradient,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.3),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+      child: Material(
+        color: Colors.transparent,
+        child: InkWell(
+          borderRadius: BorderRadius.circular(12),
+          onTap: onPressed,
+          child: Center(
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(icon, color: Colors.white, size: 18),
+                const SizedBox(width: 8),
+                Text(label, style: AppTextStyles.button.copyWith(color: Colors.white)),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
   // --- STEP 1: MATCH DETAILS (WITH FOCUS/SUGGESTION DROPDOWNS & DELETE) ---
   Widget _buildStep1MatchDetails(
     BuildContext context,
@@ -284,7 +561,12 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const SectionHeader(title: 'Step 1 — Match Information'),
+          _buildStepBanner(
+            context,
+            step: 1,
+            title: 'Match Information',
+            subtitle: 'Set the title, venue, format & match rules',
+          ),
           const SizedBox(height: 16),
 
           // Match Title with Suggestion Dropdown + Delete option + Auto-save
@@ -401,8 +683,11 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
                       children: [
                         Text(
                           'Bowler Over Limit',
@@ -470,34 +755,28 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const SectionHeader(title: 'Step 2 — Select Teams'),
-            AppHeaderActionButton(
-              label: 'New Team',
-              icon: Icons.add_rounded,
-              onPressed: () async {
-                final created = await AddEditTeamDialog.show(context);
-                if (created != null && mounted) {
-                  await teamProv.loadTeams();
-                  setState(() {
-                    if (draft.teamAId == null) {
-                      draft.teamAId = created.id;
-                    } else if (draft.teamBId == null || draft.teamBId == draft.teamAId) {
-                      draft.teamBId = created.id;
-                    }
-                  });
-                }
-              },
-            ),
-          ],
-        ),
-        const SizedBox(height: 8),
-        Text(
-          'Select two teams or create new teams to compete in this match.',
-          style: AppTextStyles.bodySmall.copyWith(
-            color: isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary,
+        _buildStepBanner(
+          context,
+          step: 2,
+          title: 'Select Teams',
+          subtitle: 'Pick or create the two competing teams',
+          trailing: _buildBannerAction(
+            context,
+            label: 'New Team',
+            icon: Icons.add_rounded,
+            onPressed: () async {
+              final created = await AddEditTeamDialog.show(context);
+              if (created != null && mounted) {
+                await teamProv.loadTeams();
+                setState(() {
+                  if (draft.teamAId == null) {
+                    draft.teamAId = created.id;
+                  } else if (draft.teamBId == null || draft.teamBId == draft.teamAId) {
+                    draft.teamBId = created.id;
+                  }
+                });
+              }
+            },
           ),
         ),
         const SizedBox(height: 20),
@@ -867,16 +1146,17 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const SectionHeader(title: 'Step 3 — Playing XI Squads'),
-            AppHeaderActionButton(
-              label: 'Add Player',
-              icon: Icons.person_add_rounded,
-              onPressed: () => _promptAddPlayerChoice(context, teamA, teamB),
-            ),
-          ],
+        _buildStepBanner(
+          context,
+          step: 3,
+          title: 'Playing XI Squads',
+          subtitle: 'Tap to select • long-press & drag to transfer',
+          trailing: _buildBannerAction(
+            context,
+            label: 'Add Player',
+            icon: Icons.person_add_rounded,
+            onPressed: () => _promptAddPlayerChoice(context, teamA, teamB),
+          ),
         ),
         const SizedBox(height: 8),
         Container(
@@ -1094,108 +1374,12 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
                     ),
                   )
                 else
-                  Wrap(
-                    spacing: 8,
-                    runSpacing: 8,
-                    children: players.map((p) {
-                      final isSelected = playingXi.contains(p.id);
-                      return LongPressDraggable<Player>(
-                        data: p,
-                        delay: const Duration(milliseconds: 200),
-                        hapticFeedbackOnStart: true,
-                        feedback: Material(
-                          elevation: 8,
-                          borderRadius: BorderRadius.circular(12),
-                          color: Colors.transparent,
-                          child: Transform.rotate(
-                            angle: -0.04,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                              decoration: BoxDecoration(
-                                color: isDark ? AppColors.darkSurfaceElevated : Colors.white,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: AppColors.primary, width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary.withValues(alpha: 0.35),
-                                    blurRadius: 14,
-                                    offset: const Offset(0, 4),
-                                  ),
-                                ],
-                              ),
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  const Icon(Icons.drag_indicator, size: 16, color: AppColors.primary),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    '#${p.jerseyNumber > 0 ? p.jerseyNumber : '—'} ${p.name}',
-                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: AppColors.primary.withValues(alpha: 0.15),
-                                      borderRadius: BorderRadius.circular(6),
-                                    ),
-                                    child: Text(
-                                      p.role,
-                                      style: const TextStyle(
-                                        fontSize: 10,
-                                        color: AppColors.primary,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                        childWhenDragging: Opacity(
-                          opacity: 0.3,
-                          child: FilterChip(
-                            label: Text('#${p.jerseyNumber > 0 ? '${p.jerseyNumber} ' : ''}${p.name}'),
-                            selected: isSelected,
-                            onSelected: null,
-                          ),
-                        ),
-                        child: FilterChip(
-                          avatar: const Icon(Icons.drag_indicator, size: 14, color: Colors.grey),
-                          label: Text(
-                            '#${p.jerseyNumber > 0 ? '${p.jerseyNumber} ' : ''}${p.name} (${p.role})',
-                            style: TextStyle(
-                              fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                              color: isSelected
-                                  ? AppColors.primary
-                                  : (isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary),
-                            ),
-                          ),
-                          selected: isSelected,
-                          showCheckmark: true,
-                          checkmarkColor: AppColors.primary,
-                          backgroundColor: isDark ? AppColors.darkSurface : AppColors.lightSurface,
-                          selectedColor: AppColors.primary.withValues(alpha: 0.12),
-                          side: BorderSide(
-                            color: isSelected ? AppColors.primary : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
-                            width: isSelected ? 1.5 : 1,
-                          ),
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                          onSelected: (val) {
-                            setState(() {
-                              if (val) {
-                                playingXi.add(p.id);
-                              } else {
-                                playingXi.remove(p.id);
-                              }
-                            });
-                          },
-                        ),
-                      );
-                    }).toList(),
+                  _buildPlayerGrid(
+                    context: context,
+                    players: players,
+                    playingXi: playingXi,
+                    teamColor: teamColor,
+                    isDark: isDark,
                   ),
               ],
             ),
@@ -1203,6 +1387,213 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
         );
       },
     );
+  }
+
+  Widget _buildPlayerGrid({
+    required BuildContext context,
+    required List<Player> players,
+    required List<String> playingXi,
+    required Color teamColor,
+    required bool isDark,
+  }) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth;
+        // Responsive columns: 1 on small width (< 380px), 2 on mobile/tablet (380-720px), 3 on wider screens
+        final int colCount = width < 380 ? 1 : (width < 720 ? 2 : 3);
+        const double spacing = 8.0;
+        final double itemWidth = (width - (spacing * (colCount - 1))) / colCount;
+
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: players.map((p) {
+            final isSelected = playingXi.contains(p.id);
+            return SizedBox(
+              width: itemWidth,
+              child: _buildPlayerCard(
+                player: p,
+                isSelected: isSelected,
+                teamColor: teamColor,
+                isDark: isDark,
+                onTap: () {
+                  setState(() {
+                    if (isSelected) {
+                      playingXi.remove(p.id);
+                    } else {
+                      playingXi.add(p.id);
+                    }
+                  });
+                },
+              ),
+            );
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlayerCard({
+    required Player player,
+    required bool isSelected,
+    required Color teamColor,
+    required bool isDark,
+    required VoidCallback onTap,
+  }) {
+    final (roleAbbr, roleColor) = _getRoleDetails(player.role);
+
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(10),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            color: isSelected
+                ? teamColor.withValues(alpha: isDark ? 0.20 : 0.08)
+                : (isDark ? AppColors.darkSurfaceElevated : AppColors.lightSurfaceElevated),
+            borderRadius: BorderRadius.circular(10),
+            border: Border.all(
+              color: isSelected
+                  ? teamColor
+                  : (isDark ? AppColors.darkBorder : AppColors.lightBorder),
+              width: isSelected ? 1.5 : 1,
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  color: isSelected
+                      ? teamColor.withValues(alpha: isDark ? 0.35 : 0.2)
+                      : (isDark ? Colors.white10 : Colors.black.withValues(alpha: 0.05)),
+                ),
+                alignment: Alignment.center,
+                child: Text(
+                  player.jerseyNumber > 0
+                      ? '#${player.jerseyNumber}'
+                      : (player.name.isNotEmpty ? player.name[0].toUpperCase() : '?'),
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: isSelected
+                        ? (isDark ? Colors.white : teamColor)
+                        : (isDark ? AppColors.darkTextSecondary : AppColors.lightTextSecondary),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            player.name,
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                              color: isDark ? AppColors.darkTextPrimary : AppColors.lightTextPrimary,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (player.isCaptain) ...[
+                          const SizedBox(width: 3),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: AppColors.accent.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'C',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: AppColors.accent,
+                              ),
+                            ),
+                          ),
+                        ],
+                        if (player.isWicketKeeper) ...[
+                          const SizedBox(width: 3),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 3, vertical: 1),
+                            decoration: BoxDecoration(
+                              color: Colors.teal.withValues(alpha: 0.2),
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: const Text(
+                              'WK',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.teal,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                      decoration: BoxDecoration(
+                        color: roleColor.withValues(alpha: isDark ? 0.25 : 0.12),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        roleAbbr,
+                        style: TextStyle(
+                          fontSize: 10,
+                          fontWeight: FontWeight.w600,
+                          color: roleColor,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Icon(
+                isSelected ? Icons.check_circle_rounded : Icons.radio_button_unchecked,
+                size: 20,
+                color: isSelected
+                    ? teamColor
+                    : (isDark ? AppColors.darkTextMuted : AppColors.lightTextMuted),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  (String, Color) _getRoleDetails(String role) {
+    switch (role.toLowerCase()) {
+      case 'bowler':
+        return ('BOWL', Colors.blue);
+      case 'all rounder':
+      case 'all-rounder':
+        return ('AR', Colors.deepPurpleAccent);
+      case 'wicketkeeper':
+      case 'wicket-keeper':
+        return ('WK', Colors.teal);
+      case 'batter':
+      case 'batsman':
+      default:
+        return ('BAT', Colors.amber.shade800);
+    }
   }
 
   // --- STEP 4: TOSS ---
@@ -1221,70 +1612,81 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Step 4 — Match Toss'),
+        _buildStepBanner(
+          context,
+          step: 4,
+          title: 'Match Toss',
+          subtitle: 'Who won it and what did they elect to do',
+        ),
         const SizedBox(height: 16),
         const Text('Who won the toss?', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _tossSelectionCard(
-                label: teamA.name,
-                isSelected: draft.tossWinnerTeamId == teamA.id,
-                onTap: () => setState(() {
-                  draft.tossWinnerTeamId = teamA.id;
-                  draft.openingStrikerId = null;
-                  draft.openingNonStrikerId = null;
-                  draft.openingBowlerId = null;
-                }),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _tossSelectionCard(
+                  label: teamA.name,
+                  isSelected: draft.tossWinnerTeamId == teamA.id,
+                  onTap: () => setState(() {
+                    draft.tossWinnerTeamId = teamA.id;
+                    draft.openingStrikerId = null;
+                    draft.openingNonStrikerId = null;
+                    draft.openingBowlerId = null;
+                  }),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _tossSelectionCard(
-                label: teamB.name,
-                isSelected: draft.tossWinnerTeamId == teamB.id,
-                onTap: () => setState(() {
-                  draft.tossWinnerTeamId = teamB.id;
-                  draft.openingStrikerId = null;
-                  draft.openingNonStrikerId = null;
-                  draft.openingBowlerId = null;
-                }),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _tossSelectionCard(
+                  label: teamB.name,
+                  isSelected: draft.tossWinnerTeamId == teamB.id,
+                  onTap: () => setState(() {
+                    draft.tossWinnerTeamId = teamB.id;
+                    draft.openingStrikerId = null;
+                    draft.openingNonStrikerId = null;
+                    draft.openingBowlerId = null;
+                  }),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         const SizedBox(height: 24),
         const Text('Elected to:', style: TextStyle(fontWeight: FontWeight.w600)),
         const SizedBox(height: 10),
-        Row(
-          children: [
-            Expanded(
-              child: _tossSelectionCard(
-                label: 'BAT FIRST 🏏',
-                isSelected: draft.tossDecision.toLowerCase() == 'bat',
-                onTap: () => setState(() {
-                  draft.tossDecision = 'Bat';
-                  draft.openingStrikerId = null;
-                  draft.openingNonStrikerId = null;
-                  draft.openingBowlerId = null;
-                }),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _tossSelectionCard(
+                  label: 'BAT FIRST 🏏',
+                  isSelected: draft.tossDecision.toLowerCase() == 'bat',
+                  onTap: () => setState(() {
+                    draft.tossDecision = 'Bat';
+                    draft.openingStrikerId = null;
+                    draft.openingNonStrikerId = null;
+                    draft.openingBowlerId = null;
+                  }),
+                ),
               ),
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: _tossSelectionCard(
-                label: 'BOWL FIRST ⚾',
-                isSelected: draft.tossDecision.toLowerCase() == 'bowl',
-                onTap: () => setState(() {
-                  draft.tossDecision = 'Bowl';
-                  draft.openingStrikerId = null;
-                  draft.openingNonStrikerId = null;
-                  draft.openingBowlerId = null;
-                }),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _tossSelectionCard(
+                  label: 'BOWL FIRST ⚾',
+                  isSelected: draft.tossDecision.toLowerCase() == 'bowl',
+                  onTap: () => setState(() {
+                    draft.tossDecision = 'Bowl';
+                    draft.openingStrikerId = null;
+                    draft.openingNonStrikerId = null;
+                    draft.openingBowlerId = null;
+                  }),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ],
     );
@@ -1375,7 +1777,12 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const SectionHeader(title: 'Step 5 — Configure Openers & Summary'),
+        _buildStepBanner(
+          context,
+          step: 5,
+          title: 'Openers & Summary',
+          subtitle: 'Configure opening batters & bowler to begin match',
+        ),
         const SizedBox(height: 16),
 
         // Match Info Card
@@ -1881,12 +2288,13 @@ class _CreateMatchWizardState extends State<CreateMatchWizard> {
         return;
       }
       final matchProv = context.read<MatchProvider>();
+      final chosenLimit = draft.maxOversPerBowler;
       final match = await matchProv.createMatchFromDraft();
       if (context.mounted) {
         final scoringProv = context.read<ScoringProvider>();
         scoringProv.clearMatchState();
-        if (draft.maxOversPerBowler != null) {
-          scoringProv.setMaxOversPerBowler(draft.maxOversPerBowler);
+        if (chosenLimit != null) {
+          scoringProv.setMaxOversPerBowler(chosenLimit);
         }
         Navigator.of(context).pushReplacement(
           MaterialPageRoute(

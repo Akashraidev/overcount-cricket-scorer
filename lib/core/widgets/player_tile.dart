@@ -27,8 +27,8 @@ class PlayerTile extends StatelessWidget {
 
     return AppCard(
       onTap: onTap,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      margin: const EdgeInsets.only(bottom: 6),
       borderColor: isSelected ? AppColors.primary : null,
       backgroundColor: isSelected ? AppColors.primary.withValues(alpha: 0.08) : null,
       child: Row(
@@ -48,9 +48,9 @@ class PlayerTile extends StatelessWidget {
             name: player.name,
             photoUrl: player.photoUrl,
             jerseyNumber: player.jerseyNumber,
-            size: 40,
+            size: 36,
           ),
-          const SizedBox(width: 12),
+          const SizedBox(width: 10),
 
           // Player Info
           Expanded(
@@ -123,7 +123,7 @@ class PlayerTile extends StatelessWidget {
             ),
           ),
 
-          if (trailing != null) trailing!,
+          ?trailing,
         ],
       ),
     );

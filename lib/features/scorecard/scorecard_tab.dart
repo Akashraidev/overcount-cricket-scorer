@@ -124,6 +124,15 @@ class ScorecardTab extends StatelessWidget {
                           ),
                         ),
                       ),
+                    ],
+                  ),
+                ),
+
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(14, 0, 12,12),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
                       Text(
                         'Total: ${inn.totalRuns}/${inn.totalWickets} (${inn.oversDisplay} Ov)',
                         style: AppTextStyles.bodyLarge.copyWith(fontWeight: FontWeight.bold),

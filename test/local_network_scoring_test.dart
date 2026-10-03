@@ -353,5 +353,49 @@ void main() {
       expect(hostService.viewers.isEmpty, true);
       expect(viewerService.viewerStatus, ViewerConnectionStatus.disconnected);
     });
+
+    test('Host generates QR payload and parseQrPayload extracts connection data', () async {
+      const testPin = '889900';
+      await hostService.startHosting(testSnapshot, customPin: testPin);
+
+      final qrPayload = hostService.qrPayload;
+      expect(qrPayload, isNotNull);
+      expect(qrPayload, startsWith('scorecard://live?'));
+      expect(qrPayload, contains('pin=889900'));
+      expect(qrPayload, contains('port=${hostService.actualPort}'));
+
+      // Test parseQrPayload
+      final parsed = LocalScoringService.parseQrPayload(qrPayload!);
+      expect(parsed, isNotNull);
+      expect(parsed!.pin, '889900');
+      expect(parsed.port, hostService.actualPort);
+      expect(parsed.host, isNotEmpty);
+
+      // Test invalid QR payload
+      expect(LocalScoringService.parseQrPayload('invalid_url'), isNull);
+      expect(LocalScoringService.parseQrPayload('https://google.com'), isNull);
+    });
+
+    test('Viewer can connect using QR payload', () async {
+      const testPin = '334455';
+      await hostService.startHosting(testSnapshot, customPin: testPin);
+
+      // Create QR payload targeting localhost
+      final qrPayload = 'scorecard://live?host=127.0.0.1&port=${hostService.actualPort}&pin=$testPin';
+
+      final parsed = LocalScoringService.parseQrPayload(qrPayload);
+      expect(parsed, isNotNull);
+
+      final ok = await viewerService.connectAsViewer(
+        parsed!.pin,
+        directHostIp: parsed.host,
+        directPort: parsed.port,
+        deviceId: 'qr_viewer_1',
+      );
+
+      expect(ok, isTrue);
+      expect(viewerService.viewerStatus, ViewerConnectionStatus.connected);
+      expect(hostService.viewers.length, 1);
+    });
   });
 }

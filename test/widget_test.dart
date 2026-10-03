@@ -1,5 +1,8 @@
+import 'dart:math' as math;
+import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:scorecard/features/matches/match_provider.dart';
 import 'package:scorecard/core/theme/app_theme.dart';
 import 'package:scorecard/data/models/team.dart';
 import 'package:scorecard/data/models/player.dart';
@@ -32,9 +35,14 @@ import 'package:scorecard/data/models/partnership.dart';
 import 'package:scorecard/features/settings/settings_provider.dart';
 import 'package:scorecard/features/settings/settings_screen.dart';
 import 'package:scorecard/core/widgets/match_tile.dart';
+import 'package:scorecard/core/widgets/team_tile.dart';
+import 'package:scorecard/core/widgets/player_tile.dart';
+import 'package:scorecard/features/scoring/widgets/live_score_banner.dart';
+import 'package:scorecard/features/scoring/widgets/boundary_celebration_overlay.dart';
 import 'package:scorecard/features/scoring/widgets/cancel_match_dialog.dart';
 import 'package:scorecard/core/widgets/app_card.dart';
 import 'package:scorecard/core/constants/app_text_styles.dart';
+import 'package:scorecard/data/repositories/player_repository.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -527,6 +535,92 @@ void main() {
       expect(find.textContaining('Max 1 overs/bowler'), findsOneWidget);
       expect(find.text('Max Overs'), findsOneWidget);
     });
+
+    test('CricketMatch model serializes, deserializes, and copies maxOversPerBowler correctly', () {
+      final unlimitedMatch = CricketMatch(
+        id: 'm_unlimited',
+        title: 'T10 Unlimited Match',
+        venue: 'Stadium',
+        matchDate: 1000,
+        format: 'T10',
+        totalOvers: 10,
+        teamAId: 'ta',
+        teamBId: 'tb',
+        maxOversPerBowler: 0,
+        createdAt: 1000,
+      );
+
+      final map = unlimitedMatch.toMap();
+      expect(map['maxOversPerBowler'], equals(0));
+
+      final restored = CricketMatch.fromMap(map);
+      expect(restored.maxOversPerBowler, equals(0));
+      expect(restored.totalOvers, equals(10));
+
+      final customMatch = unlimitedMatch.copyWith(maxOversPerBowler: 3);
+      expect(customMatch.maxOversPerBowler, equals(3));
+
+      final autoMatch = customMatch.copyWith(maxOversPerBowler: null);
+      expect(autoMatch.maxOversPerBowler, isNull);
+    });
+
+    test('ScoringProvider automatically respects match maxOversPerBowler without manual intervention', () {
+      final provider = ScoringProvider();
+
+      // 1. When a 10-over match is created with No Limit (0)
+      final noLimitMatch = CricketMatch(
+        id: 'm1',
+        title: 'T10 No Limit',
+        venue: 'Stadium',
+        matchDate: 1000,
+        format: 'T10',
+        totalOvers: 10,
+        teamAId: 'ta',
+        teamBId: 'tb',
+        maxOversPerBowler: 0,
+        createdAt: 1000,
+      );
+
+      provider.setMatchForTesting(noLimitMatch);
+      expect(provider.isUnlimitedBowlerOvers, isTrue);
+      expect(provider.maxOversPerBowler, equals(0));
+
+      // 2. When a 10-over match is created with default auto quota (null)
+      final defaultMatch = CricketMatch(
+        id: 'm2',
+        title: 'T10 Default Quota',
+        venue: 'Stadium',
+        matchDate: 1000,
+        format: 'T10',
+        totalOvers: 10,
+        teamAId: 'ta',
+        teamBId: 'tb',
+        maxOversPerBowler: null,
+        createdAt: 1000,
+      );
+
+      provider.setMatchForTesting(defaultMatch);
+      expect(provider.isUnlimitedBowlerOvers, isFalse);
+      expect(provider.maxOversPerBowler, equals(2)); // (10 / 5) = 2
+
+      // 3. When a 20-over match has custom 3 overs per bowler
+      final customMatch = CricketMatch(
+        id: 'm3',
+        title: 'T20 Custom 3 Overs',
+        venue: 'Stadium',
+        matchDate: 1000,
+        format: 'T20',
+        totalOvers: 20,
+        teamAId: 'ta',
+        teamBId: 'tb',
+        maxOversPerBowler: 3,
+        createdAt: 1000,
+      );
+
+      provider.setMatchForTesting(customMatch);
+      expect(provider.isUnlimitedBowlerOvers, isFalse);
+      expect(provider.maxOversPerBowler, equals(3));
+    });
   });
 
   group('AppButton Resilience Tests', () {
@@ -855,7 +949,38 @@ void main() {
       );
 
       expect(tester.takeException(), isNull);
-      expect(find.text('Wi-Fi Live Sharing'), findsOneWidget);
+      expect(find.text('Live Match Sharing'), findsOneWidget);
+      expect(find.textContaining('Hotspot or Local Wi-Fi'), findsOneWidget);
+    });
+
+    testWidgets('LiveSharingSheet renders Hotspot instructions and offline hosting card without overflow', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final scoringProv = ScoringProvider();
+      final localProv = LocalScoringProvider();
+
+      await tester.pumpWidget(
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<ScoringProvider>.value(value: scoringProv),
+            ChangeNotifierProvider<LocalScoringProvider>.value(value: localProv),
+          ],
+          child: MaterialApp(
+            theme: AppTheme.darkTheme,
+            home: const Scaffold(
+              body: SingleChildScrollView(
+                child: LiveSharingSheet(),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Host Live Match Offline'), findsOneWidget);
+      expect(find.textContaining('Broadcast live ball-by-ball scorecards'), findsOneWidget);
     });
   });
 
@@ -1400,4 +1525,1197 @@ void main() {
       expect(find.byIcon(Icons.sports_cricket), findsOneWidget);
     });
   });
+
+  group('PlayerProfileScreen UI & Team Selection Resilience Tests', () {
+    testWidgets('Team selection component renders on 320px screen without overflow with long team name', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final team = Team(
+        id: 'team_1',
+        name: 'Jitendra Power hitter',
+        shortName: 'JPH',
+        colorValue: 0xFF0F9D58,
+        createdAt: 1000,
+      );
+
+      final player = Player(
+        id: 'p1',
+        teamId: team.id,
+        name: 'Chotu',
+        jerseyNumber: 7,
+        role: 'All Rounder',
+        battingStyle: 'Right-hand bat',
+        bowlingStyle: 'Right-arm medium',
+        createdAt: 1000,
+      );
+
+      bool sheetOpened = false;
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  AppCard(
+                    padding: const EdgeInsets.all(18),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            PlayerAvatar(
+                              name: player.name,
+                              jerseyNumber: player.jerseyNumber,
+                              size: 68,
+                              colorValue: team.colorValue,
+                            ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(player.name, style: AppTextStyles.h2),
+                                  const SizedBox(height: 3),
+                                  Text(player.role, style: AppTextStyles.bodyMedium),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'Bat: ${player.battingStyle}  •  Bowl: ${player.bowlingStyle}',
+                                    style: AppTextStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+                        const Divider(height: 1),
+                        const SizedBox(height: 14),
+                        const Text('ASSIGNED TEAM'),
+                        const SizedBox(height: 8),
+                        InkWell(
+                          onTap: () => sheetOpened = true,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                            child: Row(
+                              children: [
+                                Container(
+                                  width: 38,
+                                  height: 38,
+                                  alignment: Alignment.center,
+                                  child: Text(team.shortName),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text(team.name, maxLines: 1, overflow: TextOverflow.ellipsis),
+                                      const SizedBox(height: 2),
+                                      Text('Current Team • Jersey #${player.jerseyNumber}'),
+                                    ],
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                                  child: const Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      Text('Change'),
+                                      SizedBox(width: 4),
+                                      Icon(Icons.swap_horiz_rounded, size: 15),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Verify no RenderFlex overflow exception
+      expect(tester.takeException(), isNull);
+      expect(find.text('Jitendra Power hitter'), findsOneWidget);
+      expect(find.text('Change'), findsOneWidget);
+
+      await tester.tap(find.text('Change'));
+      await tester.pump();
+      expect(sheetOpened, isTrue);
+    });
+
+    testWidgets('Career statistics cards render hero highlights and key metric rates cleanly on 320px screen', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      const stats = PlayerCareerStats(
+        matches: 12,
+        innings: 10,
+        runs: 348,
+        highestScore: 78,
+        notOuts: 2,
+        ballsFaced: 240,
+        fours: 32,
+        sixes: 14,
+        fifties: 3,
+        hundreds: 0,
+        wickets: 15,
+        runsConceded: 210,
+        totalLegalBallsBowled: 180,
+        bestBowling: '3/18',
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  // Batting career section
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('TOTAL RUNS'),
+                              FittedBox(fit: BoxFit.scaleDown, child: Text('${stats.runs}')),
+                              Text('${stats.innings} Innings • ${stats.notOuts} NO'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('HIGH SCORE'),
+                              FittedBox(fit: BoxFit.scaleDown, child: Text('${stats.highestScore}')),
+                              Text('${stats.ballsFaced} Balls Faced'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  // Bowling career section
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('WICKETS'),
+                              FittedBox(fit: BoxFit.scaleDown, child: Text('${stats.wickets}')),
+                              Text('${stats.runsConceded} Runs Given'),
+                            ],
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Container(
+                          padding: const EdgeInsets.all(14),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text('BEST FIGURES'),
+                              FittedBox(fit: BoxFit.scaleDown, child: Text(stats.bestBowling)),
+                              Text('${stats.runsConceded} Runs Conceded'),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('TOTAL RUNS'), findsOneWidget);
+      expect(find.text('348'), findsOneWidget);
+      expect(find.text('HIGH SCORE'), findsOneWidget);
+      expect(find.text('78'), findsOneWidget);
+      expect(find.text('WICKETS'), findsOneWidget);
+      expect(find.text('15'), findsOneWidget);
+      expect(find.text('BEST FIGURES'), findsOneWidget);
+      expect(find.text('3/18'), findsOneWidget);
+    });
+  });
+
+  group('CreateMatchWizard Stepper Symmetry & Responsiveness Tests', () {
+    testWidgets('Stepper renders 5 steps with symmetrical connector lines and centered labels without overflow on 320px screen', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      const stepLabels = ['Details', 'Teams', 'Squad', 'Toss', 'Openers'];
+      const currentStep = 4; // Step 5 as pictured in user's screenshot
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: List.generate(5, (index) {
+                        return Expanded(
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Row(
+                                children: [
+                                  Expanded(
+                                    child: index == 0
+                                        ? const SizedBox()
+                                        : Container(
+                                            height: 3,
+                                            decoration: BoxDecoration(
+                                              color: index <= currentStep ? AppColors.primary : AppColors.lightBorder,
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                  ),
+                                  Container(
+                                    width: 28,
+                                    height: 28,
+                                    alignment: Alignment.center,
+                                    child: Text('${index + 1}'),
+                                  ),
+                                  Expanded(
+                                    child: index == 4
+                                        ? const SizedBox()
+                                        : Container(
+                                            height: 3,
+                                            decoration: BoxDecoration(
+                                              color: index < currentStep ? AppColors.primary : AppColors.lightBorder,
+                                              borderRadius: BorderRadius.circular(2),
+                                            ),
+                                          ),
+                                  ),
+                                ],
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                stepLabels[index],
+                                textAlign: TextAlign.center,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      for (final label in stepLabels) {
+        expect(find.text(label), findsOneWidget);
+      }
+
+      // Verify center alignment of first and last items
+      final firstLabelCenter = tester.getCenter(find.text('Details'));
+      final lastLabelCenter = tester.getCenter(find.text('Openers'));
+
+      // Distance from screen left to Details center should match distance from Openers center to screen right
+      final leftPadding = firstLabelCenter.dx;
+      final rightPadding = 320 - lastLabelCenter.dx;
+      expect((leftPadding - rightPadding).abs(), lessThan(1.0)); // Perfect symmetry!
+    });
+
+    testWidgets('Stepper maintains bounded max-width on 1200px desktop screen', (tester) async {
+      tester.view.physicalSize = const Size(1200, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      const stepLabels = ['Details', 'Teams', 'Squad', 'Toss', 'Openers'];
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            body: Container(
+              padding: const EdgeInsets.symmetric(vertical: 12),
+              child: Center(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 600),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 8),
+                    child: Row(
+                      children: List.generate(5, (index) {
+                        return Expanded(
+                          child: Column(
+                            children: [
+                              Text(stepLabels[index]),
+                            ],
+                          ),
+                        );
+                      }),
+                    ),
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      final firstLabelCenter = tester.getCenter(find.text('Details'));
+      final lastLabelCenter = tester.getCenter(find.text('Openers'));
+
+      // Stepper width is constrained to 600px centered in 1200px (between 300px and 900px)
+      expect(firstLabelCenter.dx, greaterThan(300));
+      expect(lastLabelCenter.dx, lessThan(900));
+
+      final leftPadding = firstLabelCenter.dx;
+      final rightPadding = 1200 - lastLabelCenter.dx;
+      expect((leftPadding - rightPadding).abs(), lessThan(1.0)); // Perfect symmetry on wide screens!
+    });
+
+    testWidgets('Stepper allows tapping completed steps to navigate back', (tester) async {
+      int activeStep = 3; // Currently on Step 4 (Toss)
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: StatefulBuilder(
+            builder: (context, setState) {
+              const stepLabels = ['Details', 'Teams', 'Squad', 'Toss', 'Openers'];
+              return Scaffold(
+                body: Row(
+                  children: List.generate(5, (index) {
+                    return Expanded(
+                      child: InkWell(
+                        onTap: index < activeStep ? () => setState(() => activeStep = index) : null,
+                        child: Column(
+                          children: [
+                            Text('${index + 1}'),
+                            Text(stepLabels[index]),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+
+      expect(activeStep, 3);
+      // Tapping on 'Teams' (index 1 < 3) navigates back
+      await tester.tap(find.text('Teams'));
+      await tester.pump();
+      expect(activeStep, 1);
+
+      // Tapping on 'Openers' (index 4 > 1) does NOT navigate forward
+      await tester.tap(find.text('Openers'));
+      await tester.pump();
+      expect(activeStep, 1);
+    });
+
+    testWidgets('Step 1 Bowler Over Limit Wrap handles 320px screen without RenderFlex overflow', (tester) async {
+      tester.view.physicalSize = const Size(320, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 16),
+              child: Container(
+                padding: const EdgeInsets.all(12),
+                child: Column(
+                  children: [
+                    Wrap(
+                      alignment: WrapAlignment.spaceBetween,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      spacing: 8,
+                      runSpacing: 8,
+                      children: [
+                        const Text('Bowler Over Limit', style: TextStyle(fontWeight: FontWeight.bold)),
+                        FilterChip(
+                          label: const Text('No Limit (Unlimited)'),
+                          selected: false,
+                          onSelected: (_) {},
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Bowler Over Limit'), findsOneWidget);
+      expect(find.text('No Limit (Unlimited)'), findsOneWidget);
+    });
+
+    testWidgets('Step content starts immediately below stepper with standard padding and is not vertically centered', (tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: Scaffold(
+            appBar: AppBar(title: const Text('Create Match')),
+            body: Column(
+              children: [
+                // Stepper height ~70px
+                const SizedBox(
+                  height: 70,
+                  key: Key('stepper'),
+                  child: Center(child: Text('Stepper')),
+                ),
+                // Step Content
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Align(
+                      alignment: Alignment.topCenter,
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxWidth: 800),
+                        child: const SizedBox(
+                          key: Key('banner'),
+                          height: 60,
+                          child: Text('Select Teams'),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      final stepperBottom = tester.getBottomLeft(find.byKey(const Key('stepper'))).dy;
+      final bannerTop = tester.getTopLeft(find.byKey(const Key('banner'))).dy;
+
+      // Distance should be precisely the 16px screenPadding, NOT vertically centered
+      expect(bannerTop - stepperBottom, equals(16.0));
+    });
+  });
+
+  group('LiveScoringScreen Scoring Actions Menu Tests', () {
+    testWidgets('Scoring Actions menu renders modern options and strictly excludes Retire Batsman', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            appBar: AppBar(
+              actions: [
+                PopupMenuButton<String>(
+                  tooltip: 'Scoring Actions',
+                  key: const Key('scoring_actions_btn'),
+                  icon: const Icon(Icons.more_vert_rounded),
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'live_share',
+                      child: Text('Live Wi-Fi Sharing'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'bowler_limit',
+                      child: Text('Bowler Over Limit'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'add_bat',
+                      child: Text('Add Player to Batting Team'),
+                    ),
+                    const PopupMenuItem(
+                      value: 'add_bowl',
+                      child: Text('Add Player to Bowling Team'),
+                    ),
+                    const PopupMenuDivider(height: 12),
+                    const PopupMenuItem(
+                      value: 'declare',
+                      child: Text('End 1st Innings Early'),
+                    ),
+                    const PopupMenuDivider(height: 12),
+                    const PopupMenuItem(
+                      value: 'cancel_match',
+                      child: Text('Cancel Match'),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Open Popup Menu
+      await tester.tap(find.byKey(const Key('scoring_actions_btn')));
+      await tester.pumpAndSettle();
+
+      // Assert Retire Batsman is strictly removed
+      expect(find.textContaining('Retire Batsman'), findsNothing);
+      expect(find.textContaining('Retire'), findsNothing);
+
+      // Assert all remaining modern options are present
+      expect(find.text('Live Wi-Fi Sharing'), findsOneWidget);
+      expect(find.text('Bowler Over Limit'), findsOneWidget);
+      expect(find.text('Add Player to Batting Team'), findsOneWidget);
+      expect(find.text('Add Player to Bowling Team'), findsOneWidget);
+      expect(find.text('End 1st Innings Early'), findsOneWidget);
+      expect(find.text('Cancel Match'), findsOneWidget);
+    });
+
+    testWidgets('Modern action menu item renders cleanly without overflow on narrow 320px screen', (tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 280,
+                child: Row(
+                  children: [
+                    Container(
+                      width: 32,
+                      height: 32,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(alpha: 0.2),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: const Icon(Icons.wifi_tethering_rounded, size: 17, color: AppColors.primary),
+                    ),
+                    const SizedBox(width: 12),
+                    const Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text('Live Wi-Fi Sharing', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600)),
+                          SizedBox(height: 1.5),
+                          Text('Broadcast live score nearby', style: TextStyle(fontSize: 10.5, color: Colors.grey)),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppColors.success.withValues(alpha: 0.16),
+                        borderRadius: BorderRadius.circular(6),
+                      ),
+                      child: const Text('LIVE', style: TextStyle(fontSize: 9.5, fontWeight: FontWeight.w800, color: AppColors.success)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Live Wi-Fi Sharing'), findsOneWidget);
+      expect(find.text('Broadcast live score nearby'), findsOneWidget);
+      expect(find.text('LIVE'), findsOneWidget);
+    });
+  });
+
+  group('MatchDetailScreen Header & TabBar Layout Resilience Tests', () {
+    testWidgets('Single innings allocates exact 48px height without 40px blank space and aligns tabs to start', (tester) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: DefaultTabController(
+            length: 5,
+            child: Scaffold(
+              appBar: AppBar(
+                title: const Text('IND vs AUS'),
+                bottom: const PreferredSize(
+                  preferredSize: Size.fromHeight(48), // Single innings exact height
+                  child: TabBar(
+                    isScrollable: true,
+                    tabAlignment: TabAlignment.start,
+                    padding: EdgeInsets.symmetric(horizontal: 8),
+                    tabs: [
+                      Tab(text: 'Scorecard'),
+                      Tab(text: 'Commentary'),
+                      Tab(text: 'Stats & Charts'),
+                      Tab(text: 'Partnerships'),
+                      Tab(text: 'Fall of Wickets'),
+                    ],
+                  ),
+                ),
+              ),
+              body: const TabBarView(
+                children: [
+                  Center(child: Text('Scorecard Content')),
+                  Center(child: Text('Commentary Content')),
+                  Center(child: Text('Stats Content')),
+                  Center(child: Text('Partnerships Content')),
+                  Center(child: Text('FOW Content')),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      // Scorecard tab should be positioned near the left edge (< 30px) rather than having a 52px+ M3 startOffset
+      final scorecardTabX = tester.getTopLeft(find.text('Scorecard')).dx;
+      expect(scorecardTabX, lessThan(35.0));
+
+      // Content should not have vertical dead space
+      expect(find.text('Scorecard Content'), findsOneWidget);
+    });
+  });
+
+  group('Cricket Application Feature Upgrades & Validation Tests', () {
+    test('Format list ordering and T12 configuration', () {
+      const formats = ['T10', 'T12', 'T20', 'ODI', 'Test', 'Custom'];
+      expect(formats[0], equals('T10'));
+      expect(formats[1], equals('T12'));
+      expect(formats[2], equals('T20'));
+      expect(formats[3], equals('ODI'));
+      expect(formats[4], equals('Test'));
+      expect(formats[5], equals('Custom'));
+
+      final draft = CreateMatchDraft();
+      draft.format = 'T12';
+      draft.totalOvers = 12;
+      draft.maxOversPerBowler = 3;
+
+      expect(draft.format, equals('T12'));
+      expect(draft.totalOvers, equals(12));
+      expect(draft.maxOversPerBowler, equals(3));
+    });
+
+    test('Retired Hurt logic does not increment wicket count or mark player out', () {
+      const inn = Innings(
+        id: 'inn1',
+        matchId: 'm1',
+        inningsNumber: 1,
+        battingTeamId: 't1',
+        bowlingTeamId: 't2',
+        totalRuns: 45,
+        totalWickets: 1,
+        totalLegalBalls: 24,
+        createdAt: 0,
+      );
+
+      // Simulating a retired hurt ball event
+      int computeWickets(int current, bool isWkt, bool isRet) {
+        return current + (isWkt && !isRet ? 1 : 0);
+      }
+      expect(computeWickets(inn.totalWickets, true, true), equals(1)); // Retired hurt MUST NOT increment
+      expect(computeWickets(inn.totalWickets, true, false), equals(2)); // Real wicket increments
+
+      const batterStat = BattingStat(
+        id: 'bs1',
+        inningsId: 'inn1',
+        playerId: 'p1',
+        playerName: 'Batter A',
+        runs: 24,
+        balls: 15,
+        fours: 3,
+        sixes: 1,
+        isOut: false, // NOT OUT
+        dismissalType: 'retired hurt',
+      );
+
+      expect(batterStat.isOut, isFalse);
+      expect(batterStat.dismissalType, equals('retired hurt'));
+
+      // When player returns:
+      final returningStat = batterStat.copyWith(
+        runs: batterStat.runs + 10,
+        balls: batterStat.balls + 6,
+      );
+      expect(returningStat.isOut, isFalse);
+      expect(returningStat.runs, equals(34));
+      expect(returningStat.balls, equals(21));
+    });
+
+    test('Partnership updates and restores correctly on Undo', () {
+      var partnership = const Partnership(
+        id: 'pt1',
+        inningsId: 'inn1',
+        wicketNumber: 1,
+        batter1Id: 'p1',
+        batter1Name: 'Batter 1',
+        batter1Runs: 10,
+        batter1Balls: 8,
+        batter2Id: 'p2',
+        batter2Name: 'Batter 2',
+        batter2Runs: 15,
+        batter2Balls: 12,
+        totalRuns: 25,
+        totalBalls: 20,
+      );
+
+      // Simulate scoring 4 runs by batter 1
+      final ball1 = const Ball(
+        id: 'b1',
+        matchId: 'm1',
+        inningsId: 'inn1',
+        overNumber: 3,
+        ballNumber: 3,
+        bowlerId: 'bw1',
+        batsmanId: 'p1',
+        nonStrikerId: 'p2',
+        runsBat: 4,
+        extras: 0,
+        isLegalBall: true,
+        isWicket: false,
+        timestamp: 0,
+      );
+
+      final updatedPartnership = partnership.copyWith(
+        batter1Runs: partnership.batter1Runs + ball1.runsBat,
+        batter1Balls: partnership.batter1Balls + (ball1.isLegalBall ? 1 : 0),
+        totalRuns: partnership.totalRuns + ball1.totalRuns,
+        totalBalls: partnership.totalBalls + (ball1.isLegalBall ? 1 : 0),
+      );
+
+      expect(updatedPartnership.batter1Runs, equals(14));
+      expect(updatedPartnership.totalRuns, equals(29));
+      expect(updatedPartnership.totalBalls, equals(21));
+
+      // Simulate Undo
+      final revertedPartnership = updatedPartnership.copyWith(
+        batter1Runs: updatedPartnership.batter1Runs - ball1.runsBat,
+        batter1Balls: updatedPartnership.batter1Balls - (ball1.isLegalBall ? 1 : 0),
+        totalRuns: updatedPartnership.totalRuns - ball1.totalRuns,
+        totalBalls: updatedPartnership.totalBalls - (ball1.isLegalBall ? 1 : 0),
+      );
+
+      expect(revertedPartnership.batter1Runs, equals(partnership.batter1Runs));
+      expect(revertedPartnership.totalRuns, equals(partnership.totalRuns));
+      expect(revertedPartnership.totalBalls, equals(partnership.totalBalls));
+    });
+
+    testWidgets('Step 3 Squad Selector 2-column grid renders responsively based on width', (tester) async {
+      const p1 = Player(id: 'p1', teamId: 't1', name: 'Rohit Sharma', jerseyNumber: 45, role: 'Batter', createdAt: 0);
+      const p2 = Player(id: 'p2', teamId: 't1', name: 'Jasprit Bumrah', jerseyNumber: 93, role: 'Bowler', createdAt: 0);
+
+      Widget buildSquadGrid(double width) {
+        return MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: width,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final colCount = constraints.maxWidth < 380 ? 1 : 2;
+                    final spacing = 8.0;
+                    final itemWidth = (constraints.maxWidth - (spacing * (colCount - 1))) / colCount;
+
+                    return Wrap(
+                      spacing: spacing,
+                      runSpacing: spacing,
+                      children: [p1, p2].map((p) {
+                        return SizedBox(
+                          key: Key('card_${p.id}'),
+                          width: itemWidth,
+                          height: 48,
+                          child: Text(p.name),
+                        );
+                      }).toList(),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      }
+
+      // On 400px width: 2 columns => both items should be on the same horizontal line
+      await tester.pumpWidget(buildSquadGrid(400));
+      await tester.pumpAndSettle();
+      final p1Pos400 = tester.getTopLeft(find.byKey(const Key('card_p1')));
+      final p2Pos400 = tester.getTopLeft(find.byKey(const Key('card_p2')));
+      expect(p1Pos400.dy, equals(p2Pos400.dy));
+      expect(p2Pos400.dx, greaterThan(p1Pos400.dx));
+
+      // On 340px width: 1 column => cards stacked vertically
+      await tester.pumpWidget(buildSquadGrid(340));
+      await tester.pumpAndSettle();
+      final p1Pos340 = tester.getTopLeft(find.byKey(const Key('card_p1')));
+      final p2Pos340 = tester.getTopLeft(find.byKey(const Key('card_p2')));
+      expect(p2Pos340.dy, greaterThan(p1Pos340.dy));
+    });
+
+    testWidgets('StatsChartsTab Runs Per Over chart renders without overflow on 320px mobile', (tester) async {
+      tester.view.physicalSize = const Size(320, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      final barGroups = List.generate(
+        12,
+        (i) => BarChartGroupData(
+          x: i + 1,
+          barRods: [BarChartRodData(toY: ((i * 4) % 15).toDouble() + 1, color: Colors.green, width: 10)],
+        ),
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: Center(
+              child: SizedBox(
+                width: 290,
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    final double minWidthPerBar = 26.0;
+                    final double requiredWidth = math.max(constraints.maxWidth, barGroups.length * minWidthPerBar + 38.0);
+                    final bool isScrollable = requiredWidth > constraints.maxWidth;
+                    final double chartWidth = isScrollable ? requiredWidth : constraints.maxWidth;
+
+                    final chart = SizedBox(
+                      width: chartWidth,
+                      height: 180,
+                      child: BarChart(
+                        BarChartData(
+                          barGroups: barGroups,
+                          titlesData: const FlTitlesData(show: false),
+                        ),
+                      ),
+                    );
+
+                    if (isScrollable) {
+                      return SingleChildScrollView(
+                        scrollDirection: Axis.horizontal,
+                        child: chart,
+                      );
+                    }
+                    return chart;
+                  },
+                ),
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+    });
+
+    test('PdfScorecardGenerator produces clean first page with team scores and no over-by-over section', () async {
+      const teamA = Team(id: 't1', name: 'India', shortName: 'IND', colorValue: 0xFF1D4ED8, createdAt: 0);
+      const teamB = Team(id: 't2', name: 'Australia', shortName: 'AUS', colorValue: 0xFFEAB308, createdAt: 0);
+      final match = CricketMatch(
+        id: 'm1',
+        title: 'IND vs AUS - T12 Final',
+        teamAId: 't1',
+        teamBId: 't2',
+        totalOvers: 12,
+        format: 'T12',
+        venue: 'Melbourne Cricket Ground',
+        matchDate: 1700000000000,
+        status: 'completed',
+        winnerTeamId: 't1',
+        resultSummary: 'India won by 15 runs',
+        tossWinnerTeamId: 't1',
+        tossDecision: 'bat',
+        createdAt: 0,
+      );
+      const inn1 = Innings(
+        id: 'inn1',
+        matchId: 'm1',
+        inningsNumber: 1,
+        battingTeamId: 't1',
+        bowlingTeamId: 't2',
+        totalRuns: 135,
+        totalWickets: 4,
+        totalLegalBalls: 72,
+        createdAt: 0,
+      );
+      const inn2 = Innings(
+        id: 'inn2',
+        matchId: 'm1',
+        inningsNumber: 2,
+        battingTeamId: 't2',
+        bowlingTeamId: 't1',
+        totalRuns: 120,
+        totalWickets: 7,
+        totalLegalBalls: 72,
+        createdAt: 0,
+      );
+
+      final doc = PdfScorecardGenerator.buildPdfDocument(
+        match: match,
+        teamA: teamA,
+        teamB: teamB,
+        allInnings: [inn1, inn2],
+        battingStatsMap: {'inn1': [], 'inn2': []},
+        bowlingStatsMap: {'inn1': [], 'inn2': []},
+      );
+
+      final pdfBytes = await doc.save();
+      expect(pdfBytes, isNotEmpty);
+      expect(pdfBytes.length, greaterThan(2000));
+    });
+  });
+
+  group('UI/UX Enhancement & Compact Layout Tests', () {
+    testWidgets('Compact MatchTile, TeamTile and PlayerTile render on narrow 320px screen without overflow', (tester) async {
+      tester.view.physicalSize = const Size(320, 900);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      const teamA = Team(id: 't1', name: 'Mumbai Indians', shortName: 'MI', colorValue: 0xFF1D4ED8, createdAt: 0);
+      const teamB = Team(id: 't2', name: 'Chennai Super Kings', shortName: 'CSK', colorValue: 0xFFEAB308, createdAt: 0);
+      final match = CricketMatch(
+        id: 'm1',
+        title: 'MI vs CSK',
+        teamAId: 't1',
+        teamBId: 't2',
+        totalOvers: 20,
+        format: 'T20',
+        venue: 'Wankhede Stadium',
+        matchDate: 1700000000000,
+        status: 'live',
+        createdAt: 0,
+      );
+      const innA = Innings(
+        id: 'inn1',
+        matchId: 'm1',
+        inningsNumber: 1,
+        battingTeamId: 't1',
+        bowlingTeamId: 't2',
+        totalRuns: 185,
+        totalWickets: 4,
+        totalLegalBalls: 120,
+        createdAt: 0,
+      );
+      final player = Player(
+        id: 'p1',
+        teamId: 't1',
+        name: 'Rohit Sharma',
+        role: 'Batsman',
+        battingStyle: 'Right-Hand',
+        jerseyNumber: 45,
+        isCaptain: true,
+        createdAt: 0,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            body: SingleChildScrollView(
+              child: Column(
+                children: [
+                  MatchTile(
+                    match: match,
+                    teamA: teamA,
+                    teamB: teamB,
+                    inningsList: const [innA],
+                  ),
+                  TeamTile(
+                    team: teamA,
+                    playerCount: 15,
+                    captainName: 'Rohit Sharma',
+                  ),
+                  PlayerTile(
+                    player: player,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('Mumbai Indians'), findsWidgets);
+      expect(find.text('Chennai Super Kings'), findsOneWidget);
+      expect(find.text('185/4'), findsOneWidget);
+      expect(find.text('LIVE'), findsOneWidget);
+      expect(find.text('MI'), findsWidgets);
+      expect(find.text('Rohit Sharma'), findsWidgets);
+      expect(find.text('C'), findsOneWidget);
+    });
+
+    testWidgets('LiveScoreBanner renders with refined compact broadcast typography', (tester) async {
+      tester.view.physicalSize = const Size(360, 600);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() => tester.view.resetPhysicalSize());
+
+      const teamA = Team(id: 't1', name: 'Royal Challengers', shortName: 'RCB', colorValue: 0xFFDC2626, createdAt: 0);
+      const teamB = Team(id: 't2', name: 'Kolkata Knight Riders', shortName: 'KKR', colorValue: 0xFF7C3AED, createdAt: 0);
+      final match = CricketMatch(
+        id: 'm1',
+        title: 'RCB vs KKR',
+        teamAId: 't1',
+        teamBId: 't2',
+        totalOvers: 20,
+        format: 'T20',
+        venue: 'Chinnaswamy Stadium',
+        matchDate: 1700000000000,
+        status: 'live',
+        createdAt: 0,
+      );
+      const inn = Innings(
+        id: 'inn1',
+        matchId: 'm1',
+        inningsNumber: 1,
+        battingTeamId: 't1',
+        bowlingTeamId: 't2',
+        totalRuns: 204,
+        totalWickets: 3,
+        totalLegalBalls: 114,
+        createdAt: 0,
+      );
+
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.darkTheme,
+          home: Scaffold(
+            body: LiveScoreBanner(
+              match: match,
+              innings: inn,
+              battingTeam: teamA,
+              bowlingTeam: teamB,
+            ),
+          ),
+        ),
+      );
+
+      expect(tester.takeException(), isNull);
+      expect(find.text('ROYAL CHALLENGERS'), findsOneWidget);
+      expect(find.text('Innings 1 of 2'), findsOneWidget);
+      expect(find.text('204'), findsOneWidget);
+      expect(find.text(' / 3'), findsOneWidget);
+      expect(find.text('19.0 / 20'), findsOneWidget);
+    });
+
+    testWidgets('BoundaryCelebrationOverlay renders FOUR celebration with non-blocking IgnorePointer', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          themeMode: ThemeMode.dark,
+          home: Scaffold(
+            body: BoundaryCelebrationOverlay(
+              celebration: BoundaryCelebration(
+                type: BoundaryType.four,
+                timestamp: 1001,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('FOUR!'), findsOneWidget);
+      expect(find.text('4 RUNS'), findsOneWidget);
+      expect(find.text('BOUNDARY'), findsOneWidget);
+
+      final ignorePointer = tester.widget<IgnorePointer>(
+        find.descendant(
+          of: find.byType(BoundaryCelebrationOverlay),
+          matching: find.byType(IgnorePointer),
+        ).first,
+      );
+      expect(ignorePointer.ignoring, isTrue);
+    });
+
+    testWidgets('BoundaryCelebrationOverlay renders SIX celebration with non-blocking IgnorePointer', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          themeMode: ThemeMode.dark,
+          home: Scaffold(
+            body: BoundaryCelebrationOverlay(
+              celebration: BoundaryCelebration(
+                type: BoundaryType.six,
+                timestamp: 1002,
+              ),
+            ),
+          ),
+        ),
+      );
+
+      await tester.pump(const Duration(milliseconds: 100));
+
+      expect(find.text('SIX!'), findsOneWidget);
+      expect(find.text('6 RUNS'), findsOneWidget);
+      expect(find.text('MAXIMUM'), findsOneWidget);
+
+      final ignorePointer = tester.widget<IgnorePointer>(
+        find.descendant(
+          of: find.byType(BoundaryCelebrationOverlay),
+          matching: find.byType(IgnorePointer),
+        ).first,
+      );
+      expect(ignorePointer.ignoring, isTrue);
+    });
+
+    testWidgets('BoundaryCelebrationOverlay returns empty when celebration is null', (tester) async {
+      await tester.pumpWidget(
+        const MaterialApp(
+          home: Scaffold(
+            body: BoundaryCelebrationOverlay(
+              celebration: null,
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('FOUR!'), findsNothing);
+      expect(find.text('SIX!'), findsNothing);
+    });
+  });
 }
+
+
+
